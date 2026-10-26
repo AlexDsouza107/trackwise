@@ -1,0 +1,38 @@
+{
+  "name": "trackwise-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --require ts-node/register/transpile-only \"src/**/*.spec.ts\""
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1156.0",
+    "@nestjs/common": "^11.2.8",
+    "@nestjs/core": "^11.2.8",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/platform-express": "^11.2.8",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^6.4.2",
+    "ioredis": "^6.0.0",
+    "multer": "^2.5.0",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "xstate": "^5.33.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "5.9"
+  }
+}
