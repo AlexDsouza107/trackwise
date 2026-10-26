@@ -1,5 +1,6 @@
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
@@ -43,6 +44,10 @@ export class StorageService implements OnModuleInit {
     await this.s3.send(
       new PutObjectCommand({ Bucket: config.minio.bucket, Key: key, Body: body, ContentType: contentType }),
     );
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.s3.send(new DeleteObjectCommand({ Bucket: config.minio.bucket, Key: key }));
   }
 
   async get(key: string): Promise<Buffer> {

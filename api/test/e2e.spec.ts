@@ -23,6 +23,7 @@ const fakeStorage = {
   onModuleInit: async () => undefined,
   put: async (k: string, body: Buffer, type: string) => void files.set(k, { body, type }),
   get: async (k: string) => files.get(k)!.body,
+  delete: async (k: string) => void files.delete(k),
 };
 const emailJobs: unknown[] = [];
 const fakeQueues = {
@@ -161,6 +162,28 @@ describe('workflow', () => {
     assert.equal(back.state, 'document_scrutiny');
     assert.equal(back.doc_check.missing.length, 0);
     assert.ok(back.audit.some((a: any) => a.event === 'RAISE_DEFICIENCY' && a.note === 'Curriculum missing'));
+  });
+
+  test('documents: one per type, removable, only while editable', async () => {
+    const created = (await call('POST', '/applications', 'inst', newCourse('E2E documents'))).body;
+    await upload(created.id, 'inst', 'curriculum');
+    await upload(created.id, 'inst', 'curriculum'); // same type again replaces, never duplicates
+    let view = (await call('GET', `/applications/${created.id}`, 'inst')).body;
+    assert.equal(view.documents.length, 1);
+    const stored = files.size;
+
+    assert.equal((await call('DELETE', `/applications/${created.id}/documents/${view.documents[0].id}`, 'inst2')).status, 403);
+    assert.equal((await call('DELETE', `/applications/${created.id}/documents/${view.documents[0].id}`, 'inst')).status, 200);
+    view = (await call('GET', `/applications/${created.id}`, 'inst')).body;
+    assert.equal(view.documents.length, 0);
+    assert.equal(files.size, stored - 1, 'file removed from storage too');
+    assert.ok(view.audit.some((a: any) => a.event === 'DOCUMENT_REMOVED'));
+    assert.deepEqual(view.doc_check.missing.includes('curriculum'), true);
+
+    // After submission, documents are locked.
+    for (const d of REQUIRED) await upload(created.id, 'inst', d);
+    const sub = (await call('POST', `/applications/${created.id}/actions`, 'inst', { action: 'submit' })).body;
+    assert.equal((await call('DELETE', `/applications/${created.id}/documents/${sub.documents[0].id}`, 'inst')).status, 400);
   });
 
   test('critical compliance failures block clearance', async () => {

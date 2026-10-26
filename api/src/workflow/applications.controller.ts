@@ -1,5 +1,5 @@
 import {
-  BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Post, Query, Res, UploadedFile, UseInterceptors,
+  BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Res, UploadedFile, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -54,6 +54,11 @@ export class ApplicationsController {
     return this.svc.uploadDocument(u, id, {
       docType, filename: file.originalname, contentType: file.mimetype || 'application/octet-stream', buffer: file.buffer,
     });
+  }
+
+  @Delete('applications/:id/documents/:docId')
+  remove(@CurrentUser() u: AuthUser, @Param('id', ParseIntPipe) id: number, @Param('docId', ParseIntPipe) docId: number) {
+    return this.svc.removeDocument(u, id, docId);
   }
 
   @Get('applications/:id/documents/:docId/file')

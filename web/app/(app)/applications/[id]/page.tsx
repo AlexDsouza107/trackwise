@@ -68,6 +68,15 @@ export default function ApplicationPage() {
     } catch (e) { setActionError((e as Error).message); } finally { setBusy(null); if (fileRef.current) fileRef.current.value = ''; }
   }
 
+  async function remove(docId: number) {
+    setBusy(`remove-${docId}`); setActionError(null);
+    try {
+      await api(`/applications/${id}/documents/${docId}`, { method: 'DELETE' });
+      if (viewId === docId) setViewId(null);
+      await reload();
+    } catch (e) { setActionError((e as Error).message); } finally { setBusy(null); }
+  }
+
   return (
     <>
       <PageHeader
@@ -95,14 +104,18 @@ export default function ApplicationPage() {
                 const d = docByType(t);
                 return (
                   <li key={t} className="flex flex-wrap items-center gap-3 py-2.5 text-sm">
-                    <span className={`w-5 text-center ${d ? 'text-good-text' : 'text-bad-text'}`} aria-label={d ? 'uploaded' : 'missing'}>{d ? '✓' : '✕'}</span>
+                    <span className={`w-5 text-center ${d ? 'text-good-text' : 'text-muted'}`} aria-label={d ? 'uploaded' : 'missing'}>{d ? '✓' : '○'}</span>
                     <div className="min-w-0 flex-1">
                       <div className="font-medium">{humanize(t)}</div>
                       <div className="truncate text-xs text-muted">{d ? `${d.filename} · ${fmtBytes(d.size_bytes)} · ${fmtDate(d.uploaded_at)}` : 'Not uploaded'}</div>
                     </div>
                     {d && <button className="btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setViewId(d.id)}>View</button>}
-                    {canUpload && <button className="btn-ghost !px-2.5 !py-1 text-xs" disabled={busy === `upload-${t}`}
-                      onClick={() => { setUploadType(t); setTimeout(() => fileRef.current?.click(), 0); }}>{d ? 'Replace' : 'Upload'}</button>}
+                    {canUpload && d && (
+                      <button className="grid h-7 w-7 place-items-center rounded-full text-muted transition hover:bg-bad-soft hover:text-bad-text" aria-label={`Remove ${humanize(t)}`} title="Remove"
+                        disabled={busy === `remove-${d.id}`} onClick={() => void remove(d.id)}>✕</button>
+                    )}
+                    {canUpload && !d && <button className="btn-ghost !px-2.5 !py-1 text-xs" disabled={busy === `upload-${t}`}
+                      onClick={() => { setUploadType(t); setTimeout(() => fileRef.current?.click(), 0); }}>＋ Add</button>}
                   </li>
                 );
               })}

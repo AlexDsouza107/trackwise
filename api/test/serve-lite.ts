@@ -18,6 +18,7 @@ async function main() {
       onModuleInit: async () => undefined,
       put: async (k: string, b: Buffer) => void files.set(k, b),
       get: async (k: string) => files.get(k)!,
+      delete: async (k: string) => void files.delete(k),
     })
     .overrideProvider(QueueService).useValue({
       email: { add: async () => undefined }, scan: {}, setScanHandler: () => undefined,

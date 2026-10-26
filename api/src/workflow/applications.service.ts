@@ -157,6 +157,9 @@ export class ApplicationsService {
     if (!REQUIRED_DOCUMENTS[app.type].includes(file.docType) && file.docType !== 'other') {
       throw new BadRequestException(`Unknown document type "${file.docType}" for ${app.type}`);
     }
+    // One document per type: adding a file for a type that already has one replaces it.
+    const existing = await this.db.query<{ id: number }>('select id from documents where application_id=$1 and doc_type=$2', [id, file.docType]);
+    for (const old of existing) await this.deleteDocument(id, old.id);
     const sha256 = createHash('sha256').update(file.buffer).digest('hex');
     const key = `applications/${id}/${Date.now()}-${file.filename.replace(/[^\w.-]/g, '_')}`;
     await this.storage.put(key, file.buffer, file.contentType);
@@ -168,6 +171,25 @@ export class ApplicationsService {
     await this.audit(id, 'DOCUMENT_UPLOADED', app.state, app.state, user, `${label(file.docType)}: ${file.filename}`, at);
     await this.refresh(id);
     return doc;
+  }
+
+  private async deleteDocument(appId: number, docId: number): Promise<{ doc_type: string; filename: string } | null> {
+    const doc = await this.db.one<{ doc_type: string; filename: string; storage_key: string }>(
+      'delete from documents where id=$1 and application_id=$2 returning doc_type, filename, storage_key', [docId, appId]);
+    if (!doc) return null;
+    await this.storage.delete(doc.storage_key).catch((e: Error) => this.log.warn(`Could not delete ${doc.storage_key}: ${e.message}`));
+    return doc;
+  }
+
+  async removeDocument(user: AuthUser, appId: number, docId: number, at = new Date()) {
+    const app = await this.row(appId);
+    if (user.role !== 'institution' || user.institutionId !== app.institution_id) throw new ForbiddenException();
+    if (app.state !== 'draft' && app.state !== 'deficiency') throw new BadRequestException('Documents can only be changed while in draft or deficiency');
+    const doc = await this.deleteDocument(appId, docId);
+    if (!doc) throw new NotFoundException('Document not found');
+    await this.audit(appId, 'DOCUMENT_REMOVED', app.state, app.state, user, `${label(doc.doc_type)}: ${doc.filename}`, at);
+    await this.refresh(appId);
+    return { ok: true };
   }
 
   async download(user: AuthUser, appId: number, docId: number) {
