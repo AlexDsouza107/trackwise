@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { humanize } from '@/lib/format';
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const monthLabel = (p: string) => `${MONTHS[Number(p.slice(5, 7)) - 1]} ${p.slice(2, 4)}`;
+
 const axisProps = { stroke: 'var(--axis)', tick: { fill: 'var(--muted)', fontSize: 12 }, tickLine: false } as const;
 
 function TipBox({ active, payload, label, unit }: { active?: boolean; payload?: { name: string; value: number; color?: string }[]; label?: string; unit?: string }) {
@@ -25,10 +28,10 @@ export function TrendChart({ data, xKey, yKey, name, height = 240 }: { data: Rec
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: -12 }}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
-          <XAxis dataKey={xKey} {...axisProps} />
-          <YAxis domain={[0, 100]} {...axisProps} />
+          <XAxis dataKey={xKey} {...axisProps} tickFormatter={monthLabel} />
+          <YAxis domain={[40, 100]} {...axisProps} />
           <ReferenceLine y={70} stroke="var(--axis)" strokeDasharray="4 4" label={{ value: 'Target 70', fill: 'var(--muted)', fontSize: 11, position: 'insideBottomRight' }} />
-          <Tooltip content={<TipBox />} cursor={{ stroke: 'var(--axis)' }} />
+          <Tooltip content={<TipBox />} labelFormatter={monthLabel} cursor={{ stroke: 'var(--axis)' }} />
           <Line type="monotone" dataKey={yKey} name={name} stroke="var(--series-1)" strokeWidth={2} dot={{ r: 4, fill: 'var(--series-1)', stroke: 'var(--surface)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
         </LineChart>
       </ResponsiveContainer>
@@ -118,7 +121,7 @@ export function Heatmap({ rules, institutions, onSelect, selectedId }: {
               })}
               <td className="px-2 py-2 text-center">
                 <b>{i.score !== null ? Math.round(i.score) : '-'}</b>
-                {i.delta !== null && i.delta !== 0 && <span className={`ml-1 text-xs ${i.delta > 0 ? 'text-good-text' : 'text-bad-text'}`}>{i.delta > 0 ? '▲' : '▼'}{Math.abs(Math.round(i.delta))}</span>}
+                {i.delta !== null && Math.round(i.delta) !== 0 && <span className={`ml-1 text-xs ${i.delta > 0 ? 'text-good-text' : 'text-bad-text'}`}>{i.delta > 0 ? '▲' : '▼'}{Math.abs(Math.round(i.delta))}</span>}
               </td>
             </tr>
           ))}

@@ -221,7 +221,7 @@ export class ApplicationsService {
       await c.query(
         `insert into audit_log (application_id, event, from_state, to_state, actor_id, actor_name, actor_role, note, meta, created_at)
          values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [id, event.type, cur.state, next.state, actor.id || null, actor.name, actor.role, note ?? null,
+        [id, event.type, cur.state, next.state, actor.id || null, actor.name, actor.id ? actor.role : 'system', note ?? null,
           JSON.stringify(event.type === 'RECOMMEND' ? { outcome: event.outcome } : {}), at],
       );
       return { app: updated, from: cur.state };

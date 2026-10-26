@@ -205,14 +205,14 @@ export class SeedService implements OnApplicationBootstrap {
     const at = (hoursAgo: number) => new Date(now - hoursAgo * HOUR);
     for (const sc of SCENARIOS) {
       const inst = users[`inst${sc.inst}`];
-      const created = await this.apps.create(inst, { type: sc.type, title: sc.title, details: sc.details }, at(sc.ageH));
+      const created = await this.apps.create(inst, { type: sc.type, title: sc.title, details: sc.details }, at(sc.ageH + 1));
       const instName = INSTITUTIONS[sc.inst - 1].name;
       for (const docType of REQUIRED_DOCUMENTS[sc.type]) {
         if (sc.omit?.includes(docType)) continue;
         await this.apps.uploadDocument(inst, created.id, {
           docType, filename: `${docType}.pdf`, contentType: 'application/pdf',
           buffer: this.docFor(docType, created.reference, instName, !!sc.tiny?.includes(docType)),
-        }, at(sc.ageH - 0.5));
+        }, at(sc.ageH + 0.5));
       }
       for (const [key, who, hoursAgo, note] of sc.steps) {
         const actor = who === 'inst' ? inst : users[who];

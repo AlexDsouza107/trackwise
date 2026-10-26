@@ -30,11 +30,6 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-trackwise-secret}
     volumes: [miniodata:/data]
     ports: ["9000:9000", "9001:9001"]
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
 
   ai:
     build: ./ai
@@ -57,7 +52,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
-      minio: { condition: service_healthy }
+      minio: { condition: service_started } # the API retries until the bucket is reachable
       ai: { condition: service_started }
     ports: ["4000:4000"]
 
