@@ -43,7 +43,7 @@ function Inner({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen md:flex">
-      <aside className="glass z-10 m-3 flex flex-col rounded-[26px] md:sticky md:top-3 md:h-[calc(100vh-1.5rem)] md:w-60 md:shrink-0">
+      <aside className="aside-in glass z-10 m-3 flex flex-col rounded-[26px] md:sticky md:top-3 md:h-[calc(100vh-1.5rem)] md:w-60 md:shrink-0">
         <div className="flex items-center gap-2.5 px-5 pb-3 pt-5">
           <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-brand text-[13px] font-semibold text-brand-ink shadow-[0_6px_16px_-6px_var(--brand)]">TW</span>
           <div><div className="text-[15px] font-semibold leading-tight">TrackWise</div><div className="text-[11px] leading-tight text-muted">Approval &amp; compliance</div></div>
@@ -67,7 +67,7 @@ function Inner({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-6xl px-4 pb-10 pt-4 md:px-6">
+        <div className="main-in mx-auto max-w-6xl px-4 pb-10 pt-4 md:px-6">
           <div className="mb-5 flex justify-center">
             <span className="glass rounded-full px-3.5 py-1 text-[12px] text-ink2">Illustrative demo data · not real AICTE data</span>
           </div>

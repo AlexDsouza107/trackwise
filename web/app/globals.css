@@ -157,7 +157,26 @@ body::after {
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 ::view-transition-old(root) { z-index: 1; }
 ::view-transition-new(root) { z-index: 2; }
+@media (prefers-reduced-motion: no-preference) {
+  .seg-item[aria-pressed='true'] .theme-icon { animation: icon-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1); }
+}
+@keyframes icon-in { from { transform: rotate(-80deg) scale(0.5); opacity: 0; } to { transform: none; opacity: 1; } }
 /* Fallback (no View Transitions): cross-fade the colors of everything for a moment. */
 html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
-  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, fill 0.5s ease, stroke 0.5s ease !important;
+  transition: background-color 0.9s ease, color 0.9s ease, border-color 0.9s ease, box-shadow 0.9s ease, fill 0.9s ease, stroke 0.9s ease !important;
+}
+
+/* ---------- Sign-in -> dashboard ---------- */
+.login-leave { opacity: 0; transform: translateY(-12px) scale(0.985); filter: blur(8px); pointer-events: none; }
+@keyframes welcome-in { from { opacity: 0; transform: translateY(14px) scale(0.97); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes halo { 0% { transform: scale(0.9); opacity: 0.55; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes aside-in { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+@keyframes main-in { from { opacity: 0; transform: translateY(14px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .welcome { animation: welcome-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .welcome-bar { transform-origin: left; animation: progress 1500ms cubic-bezier(0.4, 0, 0.2, 1) both 200ms; }
+  .halo { animation: halo 1600ms ease-out infinite; }
+  .aside-in { animation: aside-in 800ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .main-in { animation: main-in 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both 120ms; }
 }

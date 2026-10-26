@@ -22,8 +22,8 @@ export default function ThemeToggle() {
     } catch { /* storage unavailable */ }
   }
 
-  /** Circular reveal from the clicked button (View Transitions); smooth color cross-fade elsewhere. */
-  function choose(t: Theme, e: React.MouseEvent<HTMLButtonElement>) {
+  /** Day/night dissolve via View Transitions; a slow color cross-fade where unsupported. */
+  function choose(t: Theme) {
     setTheme(t);
     const root = document.documentElement;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(t); return; }
@@ -32,18 +32,19 @@ export default function ThemeToggle() {
     if (!doc.startViewTransition) {
       root.classList.add('theme-anim');
       apply(t);
-      window.setTimeout(() => root.classList.remove('theme-anim'), 600);
+      window.setTimeout(() => root.classList.remove('theme-anim'), 1000);
       return;
     }
-    const box = e.currentTarget.getBoundingClientRect();
-    const x = box.left + box.width / 2;
-    const y = box.top + box.height / 2;
-    const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+    // Dissolve: the old theme stays put while the new one fades in from a soft blur, like dawn or dusk.
+    const toNight = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const transition = doc.startViewTransition(() => apply(t));
     void transition.ready.then(() => {
       root.animate(
-        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-        { duration: 700, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' },
+        {
+          opacity: [0, 1],
+          filter: [`blur(10px) brightness(${toNight ? 0.8 : 1.25})`, 'blur(0px) brightness(1)'],
+        },
+        { duration: 1100, easing: 'cubic-bezier(0.33, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' },
       );
     });
   }
@@ -51,8 +52,8 @@ export default function ThemeToggle() {
   return (
     <div className="seg w-full" role="group" aria-label="Appearance">
       {OPTIONS.map((o) => (
-        <button key={o.value} aria-pressed={theme === o.value} title={o.label} onClick={(e) => choose(o.value, e)} className="seg-item flex-1 !px-0 text-center">
-          <span aria-hidden>{o.icon}</span><span className="sr-only">{o.label}</span>
+        <button key={o.value} aria-pressed={theme === o.value} title={o.label} onClick={() => choose(o.value)} className="seg-item flex-1 !px-0 text-center">
+          <span aria-hidden className="theme-icon inline-block">{o.icon}</span><span className="sr-only">{o.label}</span>
         </button>
       ))}
     </div>

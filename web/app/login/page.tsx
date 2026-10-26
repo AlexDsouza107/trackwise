@@ -16,23 +16,35 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const demo = useApi<Demo[]>('/auth/demo-accounts');
+  const [welcome, setWelcome] = useState<User | null>(null);
 
   async function signIn(e: string, p: string) {
     setBusy(true); setError(null);
     try {
       const r = await api<{ token: string; user: User }>('/auth/login', { method: 'POST', json: { email: e, password: p } });
       storeSession(r.token, r.user);
-      router.replace('/applications');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) { router.replace('/applications'); return; }
+      document.body.style.overflow = 'hidden';
+      setWelcome(r.user); // play the welcome moment, then glide into the dashboard
+      router.prefetch('/applications');
+      window.setTimeout(() => router.replace('/applications'), 1900);
     } catch (err) { setError((err as Error).message); setBusy(false); }
   }
 
   const groups = (['admin', 'officer', 'committee', 'institution'] as Role[]).map((r) => [r, (demo.data ?? []).filter((d) => d.role === r)] as const);
 
   const initials = (n: string) => n.replace(/\(.*\)/, '').replace(/^(Dr\.|Prof\.|Registrar,)\s*/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const firstName = (n: string) => n.replace(/\(.*\)/, '').replace(/^(Dr\.|Prof\.|Registrar,)\s*/, '').trim().split(/\s+/)[0];
+  const LANDING: Record<Role, string> = {
+    admin: 'Opening decisions and analytics…', officer: 'Opening your review queue…',
+    committee: 'Opening committee reviews…', institution: 'Opening your applications…',
+  };
   const FEATURES = ['Workflow automation', 'Compliance monitoring', 'Smart alerts', 'AI risk scoring'];
 
   return (
-    <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-6 py-10 lg:grid-cols-[1.05fr_1fr]">
+    <>
+    <div className={`mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-6 py-10 transition duration-500 ease-out lg:grid-cols-[1.05fr_1fr] ${welcome ? 'login-leave' : ''}`}>
       <div className="rise">
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-12 w-12 place-items-center rounded-[15px] bg-brand text-[17px] font-semibold text-brand-ink shadow-[0_10px_30px_-8px_var(--brand)]">TW</span>
@@ -75,5 +87,19 @@ export default function Login() {
         </div>
       </div>
     </div>
+    {welcome && (
+      <div className="fixed inset-0 z-50 grid place-items-center" role="status" aria-live="polite">
+        <div className="welcome text-center">
+          <div className="relative mx-auto mb-6 grid h-20 w-20 place-items-center">
+            <span className="halo absolute inset-0 rounded-[24px] bg-brand" aria-hidden />
+            <span className="relative grid h-20 w-20 place-items-center rounded-[24px] bg-brand text-[26px] font-semibold text-brand-ink shadow-[0_18px_50px_-12px_var(--brand)]">TW</span>
+          </div>
+          <div className="text-[32px] font-semibold tracking-[-0.025em]">Welcome, {firstName(welcome.name)}</div>
+          <div className="mt-1.5 text-[15px] text-ink2">{LANDING[welcome.role]}</div>
+          <div className="mx-auto mt-6 h-1 w-44 overflow-hidden rounded-full bg-page"><div className="welcome-bar h-full w-full rounded-full bg-brand" /></div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
