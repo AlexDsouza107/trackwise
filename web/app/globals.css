@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --page: #f6f6f3; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #7a7873; --line: #e1e0d9;
+  --brand: #2a78d6; --brand-ink: #ffffff; --brand-soft: #e6f0fc;
+  --good: #0ca30c; --good-soft: #e5f5e5; --good-text: #006300;
+  --warn: #fab219; --warn-soft: #fef3d6; --warn-text: #7a5200;
+  --bad: #d03b3b; --bad-soft: #fbe7e7; --bad-text: #a02424;
+  /* categorical series (validated) */
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
+  --grid: #e1e0d9; --axis: #c3c2b7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'])) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --line: #2c2c2a;
+    --brand: #3987e5; --brand-ink: #0b0b0b; --brand-soft: #14263d;
+    --good: #0ca30c; --good-soft: #0f2a0f; --good-text: #4ccf4c;
+    --warn: #fab219; --warn-soft: #332604; --warn-text: #fab219;
+    --bad: #e66767; --bad-soft: #3a1515; --bad-text: #ff8c8c;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+    --grid: #2c2c2a; --axis: #383835;
+  }
+}
+
+body { background: var(--page); color: var(--ink); }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+@layer components {
+  .card { @apply rounded-xl border border-line bg-surface; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-brand text-brand-ink hover:opacity-90; }
+  .btn-ghost { @apply btn border border-line bg-surface text-ink hover:bg-page; }
+  .btn-danger { @apply btn bg-bad text-white hover:opacity-90; }
+  .btn-warning { @apply btn bg-warn text-black hover:opacity-90; }
+  .input { @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted; }
+  .label { @apply mb-1 block text-xs font-medium text-ink2; }
+  .th { @apply px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-muted; }
+  .td { @apply px-3 py-3 text-sm; }
+}

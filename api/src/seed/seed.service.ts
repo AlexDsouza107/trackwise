@@ -127,6 +127,8 @@ export class SeedService implements OnApplicationBootstrap {
     await this.seedApplications(users);
     await this.setApprovalDates();
     this.log.log(`Scan after seed: ${JSON.stringify(await this.scanner.scan())}`);
+    // Spread alert timestamps over the last two weeks so the volume chart has shape (illustrative).
+    await this.db.query(`update alerts set created_at = now() - ((id * 7919) % 14) * interval '1 day'`);
     this.log.log(`Seed finished in ${((Date.now() - t) / 1000).toFixed(1)}s`);
   }
 
