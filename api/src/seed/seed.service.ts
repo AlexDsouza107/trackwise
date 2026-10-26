@@ -63,7 +63,7 @@ const SCENARIOS: Scenario[] = [
   { inst: 9, type: 'new_course', title: 'MCA (AI & Data) new course', details: { courseName: 'MCA AI & Data', level: 'PG', intake: 60 }, ageH: 700, steps: HAPPY(700, [35, 25, 65, 24]) },
   { inst: 4, type: 'extension_of_approval', title: 'Extension of approval 2025-26', details: { academicYear: '2025-26', yearsRequested: 1 }, ageH: 600, steps: HAPPY(600, [26, 18, 50, 22]) },
   { inst: 4, type: 'new_course', title: 'Diploma in Robotics', details: { courseName: 'Diploma Robotics', level: 'Diploma', intake: 60 }, ageH: 1000,
-    steps: [['submit', 'inst', 1000], ['pass', 'officer1', 960], ['deficiency', 'officer2', 930, 'Faculty list does not cover the new course.'], ['resubmit', 'inst', 800, 'Updated faculty list uploaded.'], ['clear', 'officer1', 760], ['rec_reject', 'committee2', 680, 'Fee exceeds the cap and lab inventory is thin.'], ['reject', 'admin', 650]] },
+    steps: [['submit', 'inst', 1000], ['pass', 'officer1', 960], ['deficiency', 'officer2', 930, 'Faculty list does not cover the new course.'], ['resubmit', 'inst', 800, 'Updated faculty list uploaded.'], ['clear', 'officer1', 760], ['rec_reject', 'committee2', 680, 'Fee exceeds the cap and lab inventory is thin.'], ['reject', 'admin', 650, 'Rejected in line with the committee recommendation.']] },
   { inst: 7, type: 'intake_increase', title: 'Civil intake 60 to 180', details: { courseName: 'B.Tech Civil', currentIntake: 60, proposedIntake: 180, justification: 'Regional demand.' }, ageH: 500,
     steps: [['submit', 'inst', 500], ['reject', 'officer2', 470, 'Intake tripling is not supported by documented infrastructure.']] },
 
@@ -118,8 +118,11 @@ export class SeedService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap(): Promise<void> {
     if (!config.seedDemoData) return;
-    const existing = await this.db.one<{ n: string }>('select count(*) n from users');
-    if (Number(existing!.n) > 0) return;
+    if (await this.db.one("select 1 from app_meta where key='seeded'")) return;
+    // No completion marker: wipe any partial earlier attempt so seeding is all-or-nothing.
+    await this.db.query(
+      `truncate audit_log, documents, applications, compliance_results, compliance_scores, institution_metrics,
+                notifications, alerts, email_outbox, users, institutions restart identity cascade`);
     this.log.log('Seeding ILLUSTRATIVE demo data (not real AICTE data)...');
     const t = Date.now();
     const users = await this.seedPeopleAndInstitutions();
@@ -129,6 +132,7 @@ export class SeedService implements OnApplicationBootstrap {
     this.log.log(`Scan after seed: ${JSON.stringify(await this.scanner.scan())}`);
     // Spread alert timestamps over the last two weeks so the volume chart has shape (illustrative).
     await this.db.query(`update alerts set created_at = now() - ((id * 7919) % 14) * interval '1 day'`);
+    await this.db.query("insert into app_meta (key, value) values ('seeded', now()::text)");
     this.log.log(`Seed finished in ${((Date.now() - t) / 1000).toFixed(1)}s`);
   }
 

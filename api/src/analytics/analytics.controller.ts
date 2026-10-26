@@ -27,7 +27,7 @@ export class AnalyticsController {
         `select coalesce(risk_level,'unscored') level, count(*) n from applications
           where state not in ('draft','approved','rejected') group by 1`),
       this.db.query<{ day: Date; kind: string; n: string }>(
-        `select date_trunc('day', created_at) day, kind, count(*) n from alerts
+        `select date_trunc('day', created_at) as day, kind, count(*) n from alerts
           where created_at > now() - interval '14 days' group by 1,2 order by 1`),
       this.db.query<{ period: Date; avg: string }>(
         `select period, avg(score) avg from compliance_scores group by period order by period`),

@@ -1,4 +1,5 @@
 export const SCHEMA_SQL = `
+create table if not exists app_meta (key text primary key, value text not null);
 create table if not exists institutions (
   id serial primary key,
   name text not null,

@@ -7,7 +7,9 @@
     "start": "node dist/main.js",
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --require ts-node/register/transpile-only \"src/**/*.spec.ts\""
+    "test": "node --test --require ts-node/register/transpile-only \"src/**/*.spec.ts\"",
+    "test:e2e": "node --test --test-concurrency=1 --require ts-node/register/transpile-only test/e2e.spec.ts",
+    "dev:lite": "ts-node --transpile-only test/serve-lite.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1156.0",
@@ -26,6 +28,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@nestjs/testing": "^11.2.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.3.0",
