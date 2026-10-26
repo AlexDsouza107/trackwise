@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+'use client';
+import { useEffect, useState, type ReactNode } from 'react';
 import { slaStatus, STATE_LABEL } from '@/lib/format';
 import type { AppState } from '@/lib/types';
 
@@ -29,7 +30,7 @@ export function SlaChip({ hoursLeft }: { hoursLeft: string | number | null }) {
   if (status === 'none') return <span className="text-muted">-</span>;
   const map = { ok: ['good', '✓'], risk: ['warn', '!'], breached: ['bad', '✕'] } as const;
   const [tone, icon] = map[status];
-  return <Chip tone={tone} icon={icon}>{text}</Chip>;
+  return <span className={status === 'breached' ? 'pulse-bad rounded-full' : ''}><Chip tone={tone} icon={icon}>{text}</Chip></span>;
 }
 
 export function RiskChip({ level, score }: { level: string | null; score?: string | number | null }) {
@@ -52,11 +53,30 @@ export function Card({ title, action, children, className = '' }: { title?: Reac
   );
 }
 
+/** Animates integers from 0 on mount; respects reduced motion. */
+function CountUp({ to }: { to: number }) {
+  const [n, setN] = useState(to);
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || to === 0) { setN(to); return; }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / 900);
+      setN(Math.round(to * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    setN(0);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [to]);
+  return <>{n}</>;
+}
+
 export function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: string; tone?: Tone }) {
   return (
-    <div className="card p-5">
+    <div className="card lift p-5">
       <div className="text-[12px] font-medium text-ink2">{label}</div>
-      <div className={`mt-1.5 text-[34px] font-semibold leading-none tracking-tight ${tone === 'bad' ? 'text-bad-text' : ''}`}>{value}</div>
+      <div className={`mt-1.5 text-[34px] font-semibold leading-none tracking-tight ${tone === 'bad' ? 'text-bad-text' : ''}`}>{typeof value === 'number' ? <CountUp to={value} /> : value}</div>
       {hint && <div className="mt-2 text-[12px] text-muted">{hint}</div>}
     </div>
   );
@@ -80,7 +100,13 @@ export function ErrorNote({ message }: { message: string | null }) {
 }
 
 export function Loading() {
-  return <div className="p-8 text-center text-sm text-muted">Loading…</div>;
+  return (
+    <div className="space-y-3" role="status" aria-label="Loading">
+      <div className="skeleton h-8 w-56" />
+      <div className="skeleton h-4 w-80" />
+      <div className="skeleton mt-4 h-40 w-full" /><div className="skeleton h-40 w-full" />
+    </div>
+  );
 }
 
 export function Empty({ children }: { children: ReactNode }) {

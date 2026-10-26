@@ -32,7 +32,7 @@ export function TrendChart({ data, xKey, yKey, name, height = 240 }: { data: Rec
           <YAxis domain={[40, 100]} {...axisProps} />
           <ReferenceLine y={70} stroke="var(--axis)" strokeDasharray="4 4" label={{ value: 'Target 70', fill: 'var(--muted)', fontSize: 11, position: 'insideBottomRight' }} />
           <Tooltip content={<TipBox />} labelFormatter={monthLabel} cursor={{ stroke: 'var(--axis)' }} />
-          <Line type="monotone" dataKey={yKey} name={name} stroke="var(--series-1)" strokeWidth={2} dot={{ r: 4, fill: 'var(--series-1)', stroke: 'var(--surface)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+          <Line animationDuration={900} animationEasing="ease-out" type="monotone" dataKey={yKey} name={name} stroke="var(--series-1)" strokeWidth={2} dot={{ r: 4, fill: 'var(--series-1)', stroke: 'var(--surface)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -50,7 +50,7 @@ export function SimpleBars({ data, xKey, yKey, name, height = 240, colors, unit 
           <XAxis dataKey={xKey} {...axisProps} interval={0} />
           <YAxis {...axisProps} allowDecimals={false} />
           <Tooltip content={<TipBox unit={unit} />} cursor={{ fill: 'var(--brand-soft)' }} />
-          <Bar dataKey={yKey} name={name} radius={[4, 4, 0, 0]} maxBarSize={44} label={{ position: 'top', fill: 'var(--ink-2)', fontSize: 11 }}>
+          <Bar animationDuration={800} animationEasing="ease-out" dataKey={yKey} name={name} radius={[4, 4, 0, 0]} maxBarSize={44} label={{ position: 'top', fill: 'var(--ink-2)', fontSize: 11 }}>
             {data.map((_, i) => <Cell key={i} fill={colors?.[i] ?? 'var(--series-1)'} />)}
           </Bar>
         </BarChart>
@@ -77,7 +77,7 @@ export function StackedAlerts({ data, height = 260 }: { data: Record<string, str
           <Legend iconType="square" formatter={(v: string) => <span style={{ color: 'var(--ink-2)', fontSize: 12 }}>{KIND_SERIES.find((k) => k.key === v)?.label ?? v}</span>} />
           {KIND_SERIES.map((k, i) => (
             // 2px surface stroke acts as the gap between stacked segments
-            <Bar key={k.key} dataKey={k.key} name={k.label} stackId="a" fill={k.color} stroke="var(--surface)" strokeWidth={2} radius={i === KIND_SERIES.length - 1 ? [4, 4, 0, 0] : 0} maxBarSize={40} />
+            <Bar animationDuration={800} animationEasing="ease-out" key={k.key} dataKey={k.key} name={k.label} stackId="a" fill={k.color} stroke="var(--surface)" strokeWidth={2} radius={i === KIND_SERIES.length - 1 ? [4, 4, 0, 0] : 0} maxBarSize={40} />
           ))}
         </BarChart>
       </ResponsiveContainer>

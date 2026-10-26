@@ -18,6 +18,7 @@
   --glass-border: rgba(255, 255, 255, 0.85);
   --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.35);
   --glass-shadow: 0 1px 2px rgba(20, 30, 60, 0.04), 0 8px 30px rgba(20, 30, 60, 0.07);
+  --orb-1: rgba(0, 122, 255, 0.20); --orb-2: rgba(175, 82, 222, 0.17); --orb-3: rgba(255, 149, 0, 0.15);
   --bg-gradient:
     radial-gradient(55% 45% at 10% 6%, #cfe0ff 0%, transparent 70%),
     radial-gradient(45% 40% at 92% 0%, #e6d6ff 0%, transparent 70%),
@@ -40,6 +41,7 @@
   --glass-border: rgba(255, 255, 255, 0.14);
   --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
   --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 40px rgba(0, 0, 0, 0.35);
+  --orb-1: rgba(10, 132, 255, 0.30); --orb-2: rgba(191, 90, 242, 0.24); --orb-3: rgba(255, 69, 58, 0.15);
   --bg-gradient:
     radial-gradient(55% 45% at 10% 6%, #17336f 0%, transparent 70%),
     radial-gradient(45% 40% at 92% 0%, #38235f 0%, transparent 70%),
@@ -62,6 +64,7 @@
   --glass-border: rgba(255, 255, 255, 0.14);
   --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
   --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 40px rgba(0, 0, 0, 0.35);
+  --orb-1: rgba(10, 132, 255, 0.30); --orb-2: rgba(191, 90, 242, 0.24); --orb-3: rgba(255, 69, 58, 0.15);
   --bg-gradient:
     radial-gradient(55% 45% at 10% 6%, #17336f 0%, transparent 70%),
     radial-gradient(45% 40% at 92% 0%, #38235f 0%, transparent 70%),
@@ -107,4 +110,54 @@ body::before { content: ''; position: fixed; inset: 0; z-index: -1; background: 
   .seg { @apply inline-flex rounded-xl bg-page p-0.5 text-[13px]; }
   .seg-item { @apply rounded-[10px] px-3.5 py-1.5 text-ink2 transition; }
   .seg-item[aria-selected='true'], .seg-item[aria-pressed='true'] { @apply bg-surface font-medium text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]; }
+}
+
+/* ---------- Motion: subtle, transform/opacity only, disabled for reduced-motion users ---------- */
+body::after {
+  content: ''; position: fixed; inset: -25%; z-index: -1; pointer-events: none; will-change: transform;
+  background:
+    radial-gradient(36% 36% at 22% 28%, var(--orb-1), transparent 70%),
+    radial-gradient(32% 32% at 78% 22%, var(--orb-2), transparent 70%),
+    radial-gradient(38% 38% at 62% 82%, var(--orb-3), transparent 70%);
+}
+@keyframes drift {
+  0%   { transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1); }
+  100% { transform: translate3d(3%, 3%, 0) rotate(6deg) scale(1.08); }
+}
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 45%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+
+.skeleton {
+  border-radius: 14px;
+  background: linear-gradient(100deg, var(--page) 30%, color-mix(in srgb, var(--page) 40%, transparent) 50%, var(--page) 70%);
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body::after { animation: drift 55s ease-in-out infinite alternate; }
+  .card, .rise { animation: rise 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .card:nth-child(2) { animation-delay: 60ms; } .card:nth-child(3) { animation-delay: 120ms; }
+  .card:nth-child(4) { animation-delay: 180ms; } .card:nth-child(5) { animation-delay: 240ms; }
+  .card:nth-child(n+6) { animation-delay: 300ms; }
+  tbody tr { animation: fade 420ms ease-out both; }
+  tbody tr:nth-child(2) { animation-delay: 40ms; } tbody tr:nth-child(3) { animation-delay: 80ms; }
+  tbody tr:nth-child(4) { animation-delay: 120ms; } tbody tr:nth-child(5) { animation-delay: 160ms; }
+  tbody tr:nth-child(6) { animation-delay: 200ms; } tbody tr:nth-child(n+7) { animation-delay: 240ms; }
+  .skeleton { animation: shimmer 1.6s linear infinite; }
+  .pulse-bad { animation: ping 2.4s ease-out infinite; }
+  .lift { transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms; }
+  .lift:hover { transform: translateY(-3px); }
+  aside nav a { transition: background-color 180ms, color 180ms, transform 180ms; }
+  aside nav a:hover { transform: translateX(2px); }
+}
+
+/* ---------- Theme switch ---------- */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+/* Fallback (no View Transitions): cross-fade the colors of everything for a moment. */
+html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
+  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, fill 0.5s ease, stroke 0.5s ease !important;
 }
