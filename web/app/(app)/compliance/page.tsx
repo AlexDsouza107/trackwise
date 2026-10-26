@@ -69,7 +69,7 @@ export default function CompliancePage() {
                   {latestMetrics && (
                     <dl className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
                       {[['Faculty', latestMetrics.faculty_count], ['Students', latestMetrics.student_count], ['Built-up sq m', latestMetrics.built_up_sqm], ['Labs', latestMetrics.lab_count]].map(([k, v]) => (
-                        <div key={String(k)} className="rounded-lg bg-page p-2"><dt className="text-muted">{k}</dt><dd className="text-base font-semibold">{v}</dd></div>
+                        <div key={String(k)} className="rounded-xl bg-page p-2"><dt className="text-muted">{k}</dt><dd className="text-base font-semibold">{v}</dd></div>
                       ))}
                     </dl>
                   )}

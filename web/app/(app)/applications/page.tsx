@@ -27,10 +27,10 @@ export default function Applications() {
         title={staff ? (scope === 'queue' ? 'My review queue' : 'All applications') : 'My applications'}
         subtitle={staff ? queueHint[user.role] : 'Submit new applications and track their status.'}
         action={staff ? (
-          <div className="inline-flex rounded-lg border border-line bg-surface p-0.5 text-sm" role="tablist">
+          <div className="seg" role="tablist">
             {(['queue', 'all'] as const).map((s) => (
               <button key={s} role="tab" aria-selected={scope === s} onClick={() => setScope(s)}
-                className={`rounded-md px-3 py-1.5 ${scope === s ? 'bg-brand-soft font-medium text-brand' : 'text-ink2'}`}>{s === 'queue' ? 'Queue' : 'All'}</button>
+                className="seg-item">{s === 'queue' ? 'Queue' : 'All'}</button>
             ))}
           </div>
         ) : <Link href="/applications/new" className="btn-primary">＋ New application</Link>}

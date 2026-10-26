@@ -11,7 +11,7 @@ const axisProps = { stroke: 'var(--axis)', tick: { fill: 'var(--muted)', fontSiz
 function TipBox({ active, payload, label, unit }: { active?: boolean; payload?: { name: string; value: number; color?: string }[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-md">
+    <div className="glass rounded-xl px-3 py-2 text-xs">
       <div className="mb-1 font-medium">{label}</div>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2 text-ink2">

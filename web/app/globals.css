@@ -2,42 +2,109 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light is the default; dark follows the OS unless the user pinned a theme (data-theme on <html>). */
 :root {
   color-scheme: light;
-  --page: #f6f6f3; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #7a7873; --line: #e1e0d9;
-  --brand: #2a78d6; --brand-ink: #ffffff; --brand-soft: #e6f0fc;
-  --good: #0ca30c; --good-soft: #e5f5e5; --good-text: #006300;
-  --warn: #fab219; --warn-soft: #fef3d6; --warn-text: #7a5200;
-  --bad: #d03b3b; --bad-soft: #fbe7e7; --bad-text: #a02424;
-  /* categorical series (validated) */
+  --page: rgba(120, 120, 128, 0.10);
+  --surface: rgba(255, 255, 255, 0.66);
+  --ink: #1d1d1f; --ink-2: #555559; --muted: #86868b; --line: rgba(60, 60, 67, 0.13);
+  --brand: #007aff; --brand-ink: #ffffff; --brand-soft: rgba(0, 122, 255, 0.12);
+  --good: #34c759; --good-soft: rgba(52, 199, 89, 0.16); --good-text: #1f7a37;
+  --warn: #ff9f0a; --warn-soft: rgba(255, 159, 10, 0.18); --warn-text: #a35200;
+  --bad: #ff3b30; --bad-soft: rgba(255, 59, 48, 0.13); --bad-text: #c4151c;
   --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
-  --grid: #e1e0d9; --axis: #c3c2b7;
+  --grid: rgba(60, 60, 67, 0.12); --axis: rgba(60, 60, 67, 0.28);
+  --glass-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+  --glass-border: rgba(255, 255, 255, 0.85);
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 1px 2px rgba(20, 30, 60, 0.04), 0 8px 30px rgba(20, 30, 60, 0.07);
+  --bg-gradient:
+    radial-gradient(55% 45% at 10% 6%, #cfe0ff 0%, transparent 70%),
+    radial-gradient(45% 40% at 92% 0%, #e6d6ff 0%, transparent 70%),
+    radial-gradient(55% 45% at 82% 102%, #ffe2d1 0%, transparent 70%),
+    linear-gradient(180deg, #f6f8fd, #edf0f8);
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme='light'])) {
-    color-scheme: dark;
-    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --line: #2c2c2a;
-    --brand: #3987e5; --brand-ink: #0b0b0b; --brand-soft: #14263d;
-    --good: #0ca30c; --good-soft: #0f2a0f; --good-text: #4ccf4c;
-    --warn: #fab219; --warn-soft: #332604; --warn-text: #fab219;
-    --bad: #e66767; --bad-soft: #3a1515; --bad-text: #ff8c8c;
-    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
-    --grid: #2c2c2a; --axis: #383835;
-  }
+  color-scheme: dark;
+  --page: rgba(235, 235, 245, 0.08);
+  --surface: rgba(44, 44, 54, 0.55);
+  --ink: #f5f5f7; --ink-2: #c4c4ca; --muted: #8e8e93; --line: rgba(255, 255, 255, 0.11);
+  --brand: #0a84ff; --brand-ink: #ffffff; --brand-soft: rgba(10, 132, 255, 0.20);
+  --good: #30d158; --good-soft: rgba(48, 209, 88, 0.17); --good-text: #4fe070;
+  --warn: #ff9f0a; --warn-soft: rgba(255, 159, 10, 0.18); --warn-text: #ffb340;
+  --bad: #ff453a; --bad-soft: rgba(255, 69, 58, 0.18); --bad-text: #ff7a72;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+  --grid: rgba(255, 255, 255, 0.09); --axis: rgba(255, 255, 255, 0.22);
+  --glass-bg: linear-gradient(180deg, rgba(70, 70, 84, 0.46), rgba(38, 38, 48, 0.46));
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 40px rgba(0, 0, 0, 0.35);
+  --bg-gradient:
+    radial-gradient(55% 45% at 10% 6%, #17336f 0%, transparent 70%),
+    radial-gradient(45% 40% at 92% 0%, #38235f 0%, transparent 70%),
+    radial-gradient(55% 45% at 82% 102%, #3b2030 0%, transparent 70%),
+    linear-gradient(180deg, #0b0c14, #07070c);
+}
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --page: rgba(235, 235, 245, 0.08);
+  --surface: rgba(44, 44, 54, 0.55);
+  --ink: #f5f5f7; --ink-2: #c4c4ca; --muted: #8e8e93; --line: rgba(255, 255, 255, 0.11);
+  --brand: #0a84ff; --brand-ink: #ffffff; --brand-soft: rgba(10, 132, 255, 0.20);
+  --good: #30d158; --good-soft: rgba(48, 209, 88, 0.17); --good-text: #4fe070;
+  --warn: #ff9f0a; --warn-soft: rgba(255, 159, 10, 0.18); --warn-text: #ffb340;
+  --bad: #ff453a; --bad-soft: rgba(255, 69, 58, 0.18); --bad-text: #ff7a72;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+  --grid: rgba(255, 255, 255, 0.09); --axis: rgba(255, 255, 255, 0.22);
+  --glass-bg: linear-gradient(180deg, rgba(70, 70, 84, 0.46), rgba(38, 38, 48, 0.46));
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 40px rgba(0, 0, 0, 0.35);
+  --bg-gradient:
+    radial-gradient(55% 45% at 10% 6%, #17336f 0%, transparent 70%),
+    radial-gradient(45% 40% at 92% 0%, #38235f 0%, transparent 70%),
+    radial-gradient(55% 45% at 82% 102%, #3b2030 0%, transparent 70%),
+    linear-gradient(180deg, #0b0c14, #07070c);
 }
 
-body { background: var(--page); color: var(--ink); }
-:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+/* Static gradient backdrop (a fixed layer, not background-attachment, so it behaves on iOS too). */
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; background: var(--bg-gradient); }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 45%, transparent); outline-offset: 2px; border-radius: 10px; }
+::selection { background: var(--brand-soft); }
+
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-edge), var(--glass-shadow);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--surface); }
+}
 
 @layer components {
-  .card { @apply rounded-xl border border-line bg-surface; }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primary { @apply btn bg-brand text-brand-ink hover:opacity-90; }
-  .btn-ghost { @apply btn border border-line bg-surface text-ink hover:bg-page; }
-  .btn-danger { @apply btn bg-bad text-white hover:opacity-90; }
-  .btn-warning { @apply btn bg-warn text-black hover:opacity-90; }
-  .input { @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted; }
-  .label { @apply mb-1 block text-xs font-medium text-ink2; }
-  .th { @apply px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-muted; }
-  .td { @apply px-3 py-3 text-sm; }
+  .card { @apply glass rounded-[22px]; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[14px] font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45; }
+  .btn-primary { @apply btn bg-brand text-brand-ink shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_14px_-4px_var(--brand)] hover:brightness-110; }
+  .btn-ghost { @apply btn glass text-ink hover:brightness-105; }
+  .btn-danger { @apply btn bg-bad text-white hover:brightness-110; }
+  .btn-warning { @apply btn bg-warn text-black/85 hover:brightness-105; }
+  .input { @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[14px] text-ink placeholder:text-muted backdrop-blur-md transition focus:border-brand focus:outline-none focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand)_22%,transparent)]; }
+  .label { @apply mb-1.5 block text-[12px] font-medium text-ink2; }
+  .th { @apply px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted; }
+  .td { @apply px-3 py-3.5 text-[14px]; }
+  .seg { @apply inline-flex rounded-xl bg-page p-0.5 text-[13px]; }
+  .seg-item { @apply rounded-[10px] px-3.5 py-1.5 text-ink2 transition; }
+  .seg-item[aria-selected='true'], .seg-item[aria-pressed='true'] { @apply bg-surface font-medium text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]; }
 }

@@ -43,12 +43,12 @@ export default function AlertsPage() {
     <>
       <PageHeader title="Alerts & notifications" subtitle="SLA breaches, expiring approvals and missing documents, escalated by rule."
         action={isAdmin ? <button className="btn-ghost" onClick={() => void scan()}>▶ Run alert scan now</button> : undefined} />
-      {msg && <div className="mb-3 rounded-lg bg-good-soft px-3 py-2 text-sm text-good-text">✓ {msg}</div>}
+      {msg && <div className="mb-3 rounded-xl bg-good-soft px-3 py-2 text-sm text-good-text">✓ {msg}</div>}
       <ErrorNote message={err} />
-      <div className="mb-4 flex flex-wrap gap-1 border-b border-line" role="tablist">
+      <div className="seg mb-5 flex-wrap" role="tablist">
         {tabs.filter(([, , show]) => show).map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm ${tab === k ? 'border-brand font-medium text-brand' : 'border-transparent text-ink2'}`}>{label}</button>
+            className="seg-item">{label}</button>
         ))}
       </div>
 

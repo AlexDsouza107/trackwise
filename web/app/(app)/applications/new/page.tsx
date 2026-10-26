@@ -40,7 +40,7 @@ export default function NewApplication() {
         <Card title="1. Application type" className="lg:col-span-1">
           <div className="space-y-2">
             {meta.data.types.map((t) => (
-              <label key={t.type} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${type === t.type ? 'border-brand bg-brand-soft' : 'border-line'}`}>
+              <label key={t.type} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm ${type === t.type ? 'border-brand bg-brand-soft' : 'border-line'}`}>
                 <input type="radio" name="type" checked={type === t.type} onChange={() => { setType(t.type); setValues({}); }} />
                 {t.label}
               </label>

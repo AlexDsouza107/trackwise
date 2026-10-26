@@ -33,7 +33,7 @@ export default function Login() {
       <div>
         <div className="mb-4 flex items-center gap-2">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-base font-bold text-brand-ink">TW</span>
-          <span className="text-2xl font-semibold">TrackWise</span>
+          <span className="text-[28px] font-semibold tracking-tight">TrackWise</span>
         </div>
         <p className="mb-6 text-ink2">Integrated approval workflow automation, compliance monitoring and alert management.</p>
         <form className="card space-y-3 p-5" onSubmit={(e) => { e.preventDefault(); void signIn(email, password); }}>
@@ -45,7 +45,7 @@ export default function Login() {
         <p className="mt-3 text-xs text-muted">Demo password for every account: <code>demo1234</code>. All data is illustrative.</p>
       </div>
       <div className="card p-5">
-        <h2 className="mb-3 text-sm font-semibold">One-click demo accounts</h2>
+        <h2 className="mb-3 text-[15px] font-semibold tracking-tight">One-click demo accounts</h2>
         {demo.loading && <p className="text-sm text-muted">Loading accounts…</p>}
         {demo.error && <ErrorNote message={`Cannot reach the API (${demo.error}). Is it running?`} />}
         <div className="max-h-[28rem] space-y-4 overflow-auto">
@@ -55,7 +55,7 @@ export default function Login() {
               <div className="grid gap-1">
                 {list.map((d) => (
                   <button key={d.email} disabled={busy} onClick={() => void signIn(d.email, 'demo1234')}
-                    className="rounded-lg border border-line px-3 py-2 text-left text-sm hover:bg-page">
+                    className="rounded-xl bg-page px-3.5 py-2.5 text-left text-sm transition hover:brightness-95">
                     <div className="font-medium">{d.name}</div>
                     <div className="text-xs text-muted">{d.email}{d.institution ? ` · ${d.institution}` : ''}</div>
                   </button>

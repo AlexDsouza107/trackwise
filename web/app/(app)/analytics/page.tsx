@@ -24,7 +24,7 @@ export default function Analytics() {
   if (loading) return <Loading />;
   if (!data) return <ErrorNote message={error} />;
 
-  const SHORT: Record<string, string> = { document_scrutiny: 'Scrutiny', compliance_check: 'Compliance', committee_review: 'Committee' };
+  const SHORT: Record<string, string> = { document_scrutiny: 'Scrutiny', compliance_check: 'Checks', committee_review: 'Committee' };
   const pending = STAGE_ORDER.map((s) => ({ stage: SHORT[s] ?? STATE_LABEL[s as AppState], count: data.pendingByState.find((p) => p.state === s)?.count ?? 0 }));
   const turnaround = data.turnaroundByType.filter((t) => t.avgHours !== null).map((t) => ({ type: humanize(t.type), hours: Math.round(t.avgHours!) }));
   const risk = ['low', 'medium', 'high', 'unscored'].map((l) => ({ level: humanize(l), count: data.riskDistribution.find((r) => r.level === l)?.count ?? 0 }));

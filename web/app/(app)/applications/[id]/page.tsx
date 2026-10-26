@@ -16,13 +16,13 @@ function Stepper({ state, rounds }: { state: AppState; rounds: number }) {
         const done = state === 'approved' ? true : i < idx;
         const cur = i === idx && state !== 'approved';
         return (
-          <li key={s} className={`rounded-full border px-2.5 py-1 ${cur ? 'border-brand bg-brand-soft font-medium text-brand' : done ? 'border-line bg-good-soft text-good-text' : 'border-line text-muted'}`}>
+          <li key={s} className={`rounded-full px-3 py-1 ${cur ? 'bg-brand-soft font-medium text-brand' : done ? 'bg-good-soft text-good-text' : 'bg-page text-muted'}`}>
             {done ? '✓ ' : ''}{STATE_LABEL[s]}
           </li>
         );
       })}
-      {state === 'deficiency' && <li className="rounded-full border border-warn bg-warn-soft px-2.5 py-1 font-medium text-warn-text">! Deficiency (round {rounds})</li>}
-      {state === 'rejected' && <li className="rounded-full border border-bad bg-bad-soft px-2.5 py-1 font-medium text-bad-text">✕ Rejected</li>}
+      {state === 'deficiency' && <li className="rounded-full bg-warn-soft px-3 py-1 font-medium text-warn-text">! Deficiency (round {rounds})</li>}
+      {state === 'rejected' && <li className="rounded-full bg-bad-soft px-3 py-1 font-medium text-bad-text">✕ Rejected</li>}
     </ol>
   );
 }
@@ -78,7 +78,7 @@ export default function ApplicationPage() {
       <div className="mb-4"><Stepper state={app.state} rounds={app.context.deficiencyRounds} /></div>
 
       {isInst && app.state === 'deficiency' && lastDeficiency && (
-        <div className="mb-4 rounded-xl border border-warn bg-warn-soft p-4 text-sm text-warn-text">
+        <div className="mb-5 rounded-[22px] bg-warn-soft p-5 text-sm text-warn-text">
           <div className="font-semibold">! Deficiency raised by {lastDeficiency.actor_name}</div>
           <p className="mt-1">{lastDeficiency.note}</p>
           <p className="mt-1 text-xs">Upload the missing or corrected documents below, add a note, and resubmit.</p>

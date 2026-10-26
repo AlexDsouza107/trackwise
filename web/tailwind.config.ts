@@ -12,7 +12,7 @@ const config: Config = {
         good: v('good'), 'good-soft': v('good-soft'), warn: v('warn'), 'warn-soft': v('warn-soft'),
         bad: v('bad'), 'bad-soft': v('bad-soft'), 'good-text': v('good-text'), 'warn-text': v('warn-text'), 'bad-text': v('bad-text'),
       },
-      fontFamily: { sans: ['system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'] },
+      fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Display"', '"Segoe UI"', 'system-ui', 'sans-serif'] },
     },
   },
   plugins: [],
