@@ -97,7 +97,7 @@ body::before { content: ''; position: fixed; inset: 0; z-index: -1; background: 
 }
 
 @layer components {
-  .card { @apply glass rounded-[22px]; }
+  .card { @apply glass rounded-[22px]; -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%); }
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[14px] font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45; }
   .btn-primary { @apply btn bg-brand text-brand-ink shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_14px_-4px_var(--brand)] hover:brightness-110; }
   .btn-ghost { @apply btn glass text-ink hover:brightness-105; }
@@ -137,6 +137,7 @@ body::after {
 
 @media (prefers-reduced-motion: no-preference) {
   body::after { animation: drift 55s ease-in-out infinite alternate; }
+  html.scrolling body::after { animation-play-state: paused; }
   .card, .rise { animation: rise 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
   .card:nth-child(2) { animation-delay: 60ms; } .card:nth-child(3) { animation-delay: 120ms; }
   .card:nth-child(4) { animation-delay: 180ms; } .card:nth-child(5) { animation-delay: 240ms; }

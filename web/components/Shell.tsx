@@ -38,6 +38,19 @@ function Inner({ children }: { children: ReactNode }) {
     return () => { alive = false; clearInterval(t); };
   }, [path]);
 
+  // Pause the drifting backdrop while the page scrolls so the blurred glass is not re-composited every frame.
+  useEffect(() => {
+    const root = document.documentElement;
+    let t: number | undefined;
+    const onScroll = () => {
+      root.classList.add('scrolling');
+      window.clearTimeout(t);
+      t = window.setTimeout(() => root.classList.remove('scrolling'), 160);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); window.clearTimeout(t); root.classList.remove('scrolling'); };
+  }, []);
+
   const items = NAV.filter((n) => n.roles.includes(user.role));
   const active = (href: string) => (href === '/applications' ? path === href || (path.startsWith('/applications/') && !path.startsWith('/applications/new')) : path.startsWith(href));
 

@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, storeSession } from '@/lib/api';
 import { ErrorNote } from '@/components/ui';
 import { useApi } from '@/lib/api';
@@ -17,6 +17,9 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const demo = useApi<Demo[]>('/auth/demo-accounts');
   const [welcome, setWelcome] = useState<User | null>(null);
+
+  // The welcome overlay locks scrolling; the body outlives this page on client navigation, so always release it.
+  useEffect(() => () => { document.body.style.overflow = ''; }, []);
 
   async function signIn(e: string, p: string) {
     setBusy(true); setError(null);
