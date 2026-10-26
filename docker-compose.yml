@@ -1,0 +1,74 @@
+name: trackwise
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trackwise
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trackwise}
+      POSTGRES_DB: trackwise
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trackwise"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-trackwise}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-trackwise-secret}
+    volumes: [miniodata:/data]
+    ports: ["9000:9000", "9001:9001"]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  ai:
+    build: ./ai
+    ports: ["8000:8000"]
+
+  api:
+    build: ./api
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgres://trackwise:${POSTGRES_PASSWORD:-trackwise}@postgres:5432/trackwise
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-trackwise}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-trackwise-secret}
+      MINIO_BUCKET: trackwise-documents
+      AI_URL: http://ai:8000
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-real-deployments}
+      ALERT_SCAN_INTERVAL_MS: ${ALERT_SCAN_INTERVAL_MS:-60000}
+      SEED_DEMO_DATA: "true"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+      ai: { condition: service_started }
+    ports: ["4000:4000"]
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    depends_on: [api]
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:
+  miniodata:
