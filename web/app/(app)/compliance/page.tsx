@@ -4,7 +4,8 @@ import { Heatmap, TrendChart, type HeatInst } from '@/components/charts';
 import { Card, Chip, ErrorNote, Loading, PageHeader } from '@/components/ui';
 import { api, useApi } from '@/lib/api';
 import { useUser } from '@/lib/auth';
-import { fmtDate, humanize } from '@/lib/format';
+import RegistryCheck from '@/components/RegistryCheck';
+import { fmtDate, humanize, REGIONS } from '@/lib/format';
 
 interface Overview { rules: { code: string; name: string; severity: string }[]; institutions: (HeatInst & { code: string; approval_valid_until: string | null })[] }
 interface Detail {
@@ -17,7 +18,9 @@ interface Detail {
 export default function CompliancePage() {
   const user = useUser();
   const staff = user.role !== 'institution';
-  const overview = useApi<Overview>(staff ? '/compliance/overview' : null);
+  const [region, setRegion] = useState('');
+  const pinned = user.role === 'regional';
+  const overview = useApi<Overview>(staff ? `/compliance/overview${region && !pinned ? `?region=${region}` : ''}` : null);
   const [selected, setSelected] = useState<number | null>(staff ? null : user.institutionId);
   const detail = useApi<Detail>(selected ? `/compliance/institutions/${selected}` : null);
   const [busy, setBusy] = useState(false);
@@ -37,7 +40,10 @@ export default function CompliancePage() {
       <PageHeader title="Compliance monitoring" subtitle="Rules evaluated per institution each period: faculty ratio, infrastructure, accreditation validity and fee norms (illustrative thresholds)." />
       <div className="space-y-4">
         {staff && (
-          <Card title="Compliance heatmap">
+          <Card title={`Compliance heatmap${pinned ? ` · ${user.region} region` : ''}`} action={!pinned ? (
+            <select className="input !w-auto !py-1 text-[13px]" aria-label="Region" value={region} onChange={(e) => { setRegion(e.target.value); setSelected(null); }}>
+              <option value="">All regions</option>{REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>) : undefined}>
             {overview.loading && <Loading />}
             <ErrorNote message={overview.error} />
             {overview.data && <Heatmap rules={overview.data.rules} institutions={overview.data.institutions} onSelect={setSelected} selectedId={selected} />}
@@ -45,7 +51,7 @@ export default function CompliancePage() {
         )}
         {selected && (
           <Card title={detail.data ? detail.data.institution.name : 'Institution'}
-            action={staff && user.role !== 'committee' ? <button className="btn-ghost !py-1 text-xs" disabled={busy} onClick={() => void reevaluate()}>{busy ? 'Evaluating…' : '↻ Re-evaluate now'}</button> : undefined}>
+            action={staff && (user.role === 'officer' || user.role === 'admin' || user.role === 'regional') ? <button className="btn-ghost !py-1 text-xs" disabled={busy} onClick={() => void reevaluate()}>{busy ? 'Evaluating…' : '↻ Re-evaluate now'}</button> : undefined}>
             <ErrorNote message={err ?? detail.error} />
             {detail.loading && <Loading />}
             {detail.data && (
@@ -53,6 +59,7 @@ export default function CompliancePage() {
                 <div>
                   <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">Compliance score, last {detail.data.trend.length} months</div>
                   <TrendChart data={detail.data.trend} xKey="period" yKey="score" name="Compliance score" />
+                  <RegistryCheck institutionId={detail.data.institution.id} />
                   <p className="mt-1 text-xs text-muted">Approval valid until: {detail.data.institution.approval_valid_until ? fmtDate(detail.data.institution.approval_valid_until).split(',').slice(0, 2).join(',') : 'n/a'}</p>
                 </div>
                 <div>

@@ -61,9 +61,24 @@ export function SimpleBars({ data, xKey, yKey, name, height = 240, colors, unit 
 
 export const KIND_SERIES: { key: string; label: string; color: string }[] = [
   { key: 'SLA_BREACH', label: 'SLA breach', color: 'var(--series-1)' },
-  { key: 'APPROVAL_EXPIRING', label: 'Approval expiring', color: 'var(--series-2)' },
+  { key: 'EXPIRING', label: 'Approval / document expiring', color: 'var(--series-2)' },
   { key: 'MISSING_DOCUMENTS', label: 'Missing documents', color: 'var(--series-3)' },
+  { key: 'EVC', label: 'Expert visit (EVC)', color: 'var(--series-4)' },
 ];
+
+/** Alert kinds roll up into the four chart series. */
+export const KIND_FAMILY: Record<string, string> = {
+  SLA_BREACH: 'SLA_BREACH', APPROVAL_EXPIRING: 'EXPIRING', DOCUMENT_EXPIRING: 'EXPIRING', MISSING_DOCUMENTS: 'MISSING_DOCUMENTS',
+  EVC_UNSCHEDULED: 'EVC', EVC_VISIT_REMINDER: 'EVC', EVC_REPORT_OVERDUE: 'EVC',
+};
+
+export function groupAlertVolume(rows: Record<string, string | number>[]): Record<string, string | number>[] {
+  return rows.map((row) => {
+    const out: Record<string, string | number> = { day: row.day };
+    for (const [k, v] of Object.entries(row)) if (k !== 'day') out[KIND_FAMILY[k] ?? k] = Number(out[KIND_FAMILY[k] ?? k] ?? 0) + Number(v);
+    return out;
+  });
+}
 
 export function StackedAlerts({ data, height = 260 }: { data: Record<string, string | number>[]; height?: number }) {
   return (

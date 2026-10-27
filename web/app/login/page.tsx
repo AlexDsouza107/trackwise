@@ -7,7 +7,7 @@ import { useApi } from '@/lib/api';
 import type { Role, User } from '@/lib/types';
 
 interface Demo { email: string; name: string; role: Role; institution: string | null }
-const ROLE_LABEL: Record<Role, string> = { admin: 'Administrator', officer: 'Scrutiny officers', committee: 'Committee members', institution: 'Institutions' };
+const ROLE_LABEL: Record<Role, string> = { admin: 'Administrator', officer: 'Scrutiny officers', regional: 'Regional officers', committee: 'Committee members', institution: 'Institutions' };
 
 export default function Login() {
   const router = useRouter();
@@ -35,13 +35,13 @@ export default function Login() {
     } catch (err) { setError((err as Error).message); setBusy(false); }
   }
 
-  const groups = (['admin', 'officer', 'committee', 'institution'] as Role[]).map((r) => [r, (demo.data ?? []).filter((d) => d.role === r)] as const);
+  const groups = (['admin', 'officer', 'regional', 'committee', 'institution'] as Role[]).map((r) => [r, (demo.data ?? []).filter((d) => d.role === r)] as const);
 
   const initials = (n: string) => n.replace(/\(.*\)/, '').replace(/^(Dr\.|Prof\.|Registrar,)\s*/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   const firstName = (n: string) => n.replace(/\(.*\)/, '').replace(/^(Dr\.|Prof\.|Registrar,)\s*/, '').trim().split(/\s+/)[0];
   const LANDING: Record<Role, string> = {
     admin: 'Opening decisions and analytics…', officer: 'Opening your review queue…',
-    committee: 'Opening committee reviews…', institution: 'Opening your applications…',
+    committee: 'Opening committee reviews…', regional: 'Opening your region…', institution: 'Opening your applications…',
   };
   const FEATURES = ['Workflow automation', 'Compliance monitoring', 'Smart alerts', 'AI risk scoring'];
 

@@ -29,7 +29,7 @@ export default function AlertsPage() {
   async function markAll() { await api('/notifications/read-all', { method: 'POST' }); await inbox.reload(); }
   async function scan() {
     setErr(null); setMsg(null);
-    try { const r = await api<{ sla: number; expiring: number; missingDocs: number }>('/alerts/scan', { method: 'POST' }); setMsg(`Scan finished. New alerts: SLA ${r.sla}, expiring approvals ${r.expiring}, missing documents ${r.missingDocs}.`); await inbox.reload(); await log.reload(); }
+    try { const r = await api<{ sla: number; expiring: number; missingDocs: number; documents: number; evc: number }>('/alerts/scan', { method: 'POST' }); setMsg(`Scan finished. New alerts: SLA ${r.sla}, expiring approvals ${r.expiring}, missing documents ${r.missingDocs}, document validity ${r.documents}, expert visits ${r.evc}.`); await inbox.reload(); await log.reload(); }
     catch (e) { setErr((e as Error).message); }
   }
   async function patchRule(r: RuleRow, patch: Partial<RuleRow>) {
@@ -90,7 +90,7 @@ export default function AlertsPage() {
 
       {tab === 'rules' && (
         <Card title="Escalation rules">
-          <p className="mb-3 text-xs text-ink2">SLA breach and missing documents: hours after the due time / since the stage began. Approval expiring: hours <i>before</i> expiry. Each level fires once.</p>
+          <p className="mb-3 text-xs text-ink2">SLA breach: hours after the due time. Missing documents and EVC unscheduled: hours since the stage began. Approval / document expiring and EVC visit reminder: hours <i>before</i> the date. EVC report overdue: hours after the visit date. Each level fires once.</p>
           <div className="overflow-x-auto"><table className="w-full min-w-[640px]">
             <thead><tr><th className="th">Kind</th><th className="th">Level</th><th className="th">After (hours)</th><th className="th">Notify</th><th className="th">Email</th><th className="th">Enabled</th></tr></thead>
             <tbody className="divide-y divide-line">

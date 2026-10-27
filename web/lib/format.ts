@@ -2,11 +2,15 @@ import type { AppState } from './types';
 
 export const STATE_LABEL: Record<AppState, string> = {
   draft: 'Draft', submitted: 'Submitted', document_scrutiny: 'Document Scrutiny', compliance_check: 'Compliance Check',
-  committee_review: 'Expert Committee Review', decision: 'Decision', deficiency: 'Deficiency', approved: 'Approved', rejected: 'Rejected',
+  evc_visit: 'Expert Visit (EVC)', committee_review: 'Expert Committee Review', decision: 'Decision', deficiency: 'Deficiency', approved: 'Approved', rejected: 'Rejected',
 };
 
-/** Happy-path stages shown in the progress stepper. */
-export const STAGES: AppState[] = ['submitted', 'document_scrutiny', 'compliance_check', 'committee_review', 'decision', 'approved'];
+/** Stages shown in the progress stepper for an application's own route. */
+export const stagesFor = (route: AppState[]): AppState[] => ['submitted', ...route, 'decision', 'approved'];
+
+export const REGIONS = ['Northern', 'Southern', 'Eastern', 'Western', 'Central'] as const;
+
+export const STATUS_LABEL: Record<string, string> = { valid: 'Valid', expiring: 'Expiring soon', expired: 'Expired', renewal_pending: 'Renewal pending' };
 
 export const humanize = (s: string) => s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 

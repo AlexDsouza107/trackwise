@@ -162,7 +162,7 @@ export class LettersService {
       if (l.dueBy) { this.h2(doc, 'Time limit'); doc.text(`Please resubmit before ${stamp(l.dueBy)}. Delays are escalated automatically.`); }
       this.h2(doc, 'How to respond');
       l.instructions.forEach((t, n) => doc.text(`${n + 1}. ${t}`).moveDown(0.15));
-      doc.moveDown(1).text(`Issued by: ${l.issuedBy.name} (${l.issuedBy.role})`);
+      doc.moveDown(1).text(`Issued by: ${l.issuedBy.name}`);
       this.footer(doc, 'Auto-drafted by TrackWise from the review findings.');
     });
   }

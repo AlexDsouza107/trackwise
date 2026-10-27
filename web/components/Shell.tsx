@@ -8,15 +8,18 @@ import ThemeToggle from '@/components/ThemeToggle';
 import type { Notification, Role } from '@/lib/types';
 
 const NAV: { href: string; label: string; icon: string; roles: Role[] }[] = [
-  { href: '/applications', label: 'Applications', icon: '▤', roles: ['institution', 'officer', 'committee', 'admin'] },
+  { href: '/applications', label: 'Applications', icon: '▤', roles: ['institution', 'officer', 'committee', 'regional', 'admin'] },
   { href: '/applications/new', label: 'New application', icon: '＋', roles: ['institution'] },
-  { href: '/compliance', label: 'Compliance', icon: '◈', roles: ['institution', 'officer', 'committee', 'admin'] },
-  { href: '/analytics', label: 'Analytics', icon: '▥', roles: ['officer', 'committee', 'admin'] },
-  { href: '/alerts', label: 'Alerts', icon: '◔', roles: ['institution', 'officer', 'committee', 'admin'] },
+  { href: '/evc', label: 'Expert visits', icon: '◎', roles: ['officer', 'committee', 'regional', 'admin'] },
+  { href: '/compliance', label: 'Compliance', icon: '◈', roles: ['institution', 'officer', 'committee', 'regional', 'admin'] },
+  { href: '/documents', label: 'Document validity', icon: '▣', roles: ['institution', 'officer', 'committee', 'regional', 'admin'] },
+  { href: '/analytics', label: 'Analytics', icon: '▥', roles: ['officer', 'committee', 'regional', 'admin'] },
+  { href: '/alerts', label: 'Alerts', icon: '◔', roles: ['institution', 'officer', 'committee', 'regional', 'admin'] },
+  { href: '/settings', label: 'Settings', icon: '⚙', roles: ['admin'] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
-  institution: 'Institution', officer: 'Scrutiny Officer', committee: 'Committee Member', admin: 'Administrator',
+  institution: 'Institution', officer: 'Scrutiny Officer', committee: 'Committee Member', regional: 'Regional Officer', admin: 'Administrator',
 };
 
 function Inner({ children }: { children: ReactNode }) {
@@ -74,7 +77,7 @@ function Inner({ children }: { children: ReactNode }) {
           <ThemeToggle />
           <div className="px-1">
             <div className="truncate text-[13px] font-medium">{user.name}</div>
-            <div className="text-[12px] text-muted">{ROLE_LABEL[user.role]}</div>
+            <div className="text-[12px] text-muted">{ROLE_LABEL[user.role]}{user.region ? ` · ${user.region}` : ''}</div>
             <button className="mt-1.5 text-[12px] text-brand hover:underline" onClick={() => { clearSession(); router.replace('/login'); }}>Sign out</button>
           </div>
         </div>

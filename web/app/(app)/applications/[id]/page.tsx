@@ -1,20 +1,26 @@
 'use client';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 import DocViewer from '@/components/DocViewer';
+import EvcPanel from '@/components/EvcPanel';
+import RegistryCheck from '@/components/RegistryCheck';
 import { Card, Chip, ErrorNote, Loading, PageHeader, RiskChip, SlaChip, StateBadge } from '@/components/ui';
-import { api, useApi } from '@/lib/api';
+import { api, fetchBlobUrl, useApi } from '@/lib/api';
 import { useUser } from '@/lib/auth';
-import { fmtBytes, fmtDate, humanize, STAGES, STATE_LABEL } from '@/lib/format';
+import { fmtBytes, fmtDate, humanize, stagesFor, STATE_LABEL, STATUS_LABEL } from '@/lib/format';
 import type { ApplicationDetail, AppState } from '@/lib/types';
 
-function Stepper({ state, rounds }: { state: AppState; rounds: number }) {
-  const idx = STAGES.indexOf(state === 'rejected' ? 'decision' : state);
+function Stepper({ state, rounds, route, from }: { state: AppState; rounds: number; route: AppState[]; from: AppState | null }) {
+  const stages = stagesFor(route);
+  // While in deficiency the stepper stays on the stage that raised it.
+  const at = state === 'deficiency' ? (from ?? 'document_scrutiny') : state === 'rejected' ? 'decision' : state;
+  const idx = stages.indexOf(at);
   return (
     <ol className="flex flex-wrap gap-1.5 text-xs" aria-label="Workflow progress">
-      {STAGES.map((s, i) => {
+      {stages.map((s, i) => {
         const done = state === 'approved' ? true : i < idx;
-        const cur = i === idx && state !== 'approved';
+        const cur = i === idx && state !== 'approved' && state !== 'deficiency';
         return (
           <li key={s} className={`rounded-full px-3 py-1 ${cur ? 'bg-brand-soft font-medium text-brand' : done ? 'bg-good-soft text-good-text' : 'bg-page text-muted'}`}>
             {done ? '✓ ' : ''}{STATE_LABEL[s]}
@@ -37,6 +43,9 @@ export default function ApplicationPage() {
   const [viewId, setViewId] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadType, setUploadType] = useState<string | null>(null);
+  const [lockerFor, setLockerFor] = useState<string | null>(null);
+  const [lockerRef, setLockerRef] = useState('');
+  const integrations = useApi<{ digilockerTypes: string[] }>(user.role === 'institution' ? '/integrations' : null);
 
   if (error && !app) return <ErrorNote message={error} />;
   if (!app) return <Loading />;
@@ -68,6 +77,27 @@ export default function ApplicationPage() {
     } catch (e) { setActionError((e as Error).message); } finally { setBusy(null); if (fileRef.current) fileRef.current.value = ''; }
   }
 
+  async function fetchFromLocker(docType: string) {
+    setBusy(`locker-${docType}`); setActionError(null);
+    try {
+      await api(`/applications/${id}/documents/digilocker`, { method: 'POST', json: { docType, referenceId: lockerRef.trim() } });
+      setLockerFor(null); setLockerRef('');
+      await reload();
+    } catch (e) { setActionError((e as Error).message); } finally { setBusy(null); }
+  }
+
+  async function draftNote() {
+    setBusy('draft'); setActionError(null);
+    try { setNote((await api<{ note: string }>(`/applications/${id}/draft-deficiency`)).note); }
+    catch (e) { setActionError((e as Error).message); } finally { setBusy(null); }
+  }
+
+  async function openPdf(path: string) {
+    setBusy(path); setActionError(null);
+    try { window.open(await fetchBlobUrl(`/applications/${id}/${path}`), '_blank', 'noopener'); }
+    catch (e) { setActionError((e as Error).message); } finally { setBusy(null); }
+  }
+
   async function remove(docId: number) {
     setBusy(`remove-${docId}`); setActionError(null);
     try {
@@ -84,7 +114,7 @@ export default function ApplicationPage() {
         subtitle={`${app.reference} · ${app.typeLabel} · ${app.institution.name}, ${app.institution.city}`}
         action={<div className="flex items-center gap-2"><SlaChip hoursLeft={hoursLeft} /><StateBadge state={app.state} /></div>}
       />
-      <div className="mb-4"><Stepper state={app.state} rounds={app.context.deficiencyRounds} /></div>
+      <div className="mb-4"><Stepper state={app.state} rounds={app.context.deficiencyRounds} route={app.route} from={app.context.deficiencyFrom as AppState | null} /></div>
 
       {isInst && app.state === 'deficiency' && lastDeficiency && (
         <div className="mb-5 rounded-[22px] bg-warn-soft p-5 text-sm text-warn-text">
@@ -109,19 +139,34 @@ export default function ApplicationPage() {
                       <div className="font-medium">{humanize(t)}</div>
                       <div className="truncate text-xs text-muted">{d ? `${d.filename} · ${fmtBytes(d.size_bytes)} · ${fmtDate(d.uploaded_at)}` : 'Not uploaded'}</div>
                     </div>
+                    {d && d.source !== 'upload' && <Chip tone="brand" icon="⇩">{d.source}</Chip>}
                     {d && <button className="btn-ghost !px-2.5 !py-1 text-xs" onClick={() => setViewId(d.id)}>View</button>}
                     {canUpload && d && (
                       <button className="grid h-7 w-7 place-items-center rounded-full text-muted transition hover:bg-bad-soft hover:text-bad-text" aria-label={`Remove ${humanize(t)}`} title="Remove"
                         disabled={busy === `remove-${d.id}`} onClick={() => void remove(d.id)}>✕</button>
                     )}
+                    {canUpload && !d && integrations.data?.digilockerTypes.includes(t) && (
+                      <button className="btn-ghost !px-2.5 !py-1 text-xs" onClick={() => { setLockerFor(lockerFor === t ? null : t); setLockerRef(''); }}>⇩ DigiLocker</button>
+                    )}
                     {canUpload && !d && <button className="btn-ghost !px-2.5 !py-1 text-xs" disabled={busy === `upload-${t}`}
                       onClick={() => { setUploadType(t); setTimeout(() => fileRef.current?.click(), 0); }}>＋ Add</button>}
+                    {lockerFor === t && !d && (
+                      <form className="flex w-full items-center gap-2 pl-8" onSubmit={(e) => { e.preventDefault(); void fetchFromLocker(t); }}>
+                        <input className="input !py-1.5 text-xs" aria-label="DigiLocker reference" placeholder="Reference number, e.g. DOC-2026-0451" value={lockerRef} onChange={(e) => setLockerRef(e.target.value)} />
+                        <button className="btn-primary !px-3 !py-1.5 text-xs" disabled={busy === `locker-${t}` || lockerRef.trim().length < 6}>{busy === `locker-${t}` ? 'Fetching…' : 'Fetch'}</button>
+                        <span className="text-[11px] text-muted">Demo adapter: references ending in 000 are “not found”.</span>
+                      </form>
+                    )}
                   </li>
                 );
               })}
             </ul>
             <div className="mt-4"><DocViewer appId={app.id} doc={viewDoc} /></div>
           </Card>
+
+          {app.evc && app.route.includes('evc_visit') && (
+            <EvcPanel appId={app.id} visit={app.evc} user={user} active={app.state === 'evc_visit'} onChange={reload} />
+          )}
 
           <Card title="Application details">
             <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -174,8 +219,27 @@ export default function ApplicationPage() {
                     {app.compliance.criticalFailures > 0 && <p className="mt-2 text-sm text-bad-text">✕ {app.compliance.criticalFailures} critical failure(s) block clearance. Raise a deficiency.</p>}
                   </>
                 )}
+                <RegistryCheck institutionId={app.institution.id} />
               </Card>
             </>
+          )}
+
+          {app.validity.length > 0 && (
+            <Card title="Prescribed document validity" action={<Link href="/documents" className="text-xs text-brand hover:underline">Open register</Link>}>
+              <ul className="divide-y divide-line text-sm">
+                {app.validity.map((v) => {
+                  const days = Math.round((new Date(v.valid_until).getTime() - Date.now()) / 86_400_000);
+                  const st = v.renewal_pending ? 'renewal_pending' : days < 0 ? 'expired' : days <= 90 ? 'expiring' : 'valid';
+                  return (
+                    <li key={v.kind} className="flex items-center gap-3 py-2">
+                      <Chip tone={st === 'valid' ? 'good' : st === 'expired' ? 'bad' : 'warn'} icon={st === 'valid' ? '✓' : st === 'expired' ? '✕' : '!'}>{STATUS_LABEL[st]}</Chip>
+                      <span className="font-medium">{humanize(v.kind)}</span>
+                      <span className="ml-auto text-xs text-ink2">valid until {v.valid_until.slice(0, 10)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
           )}
         </div>
 
@@ -185,7 +249,10 @@ export default function ApplicationPage() {
             {app.availableActions.length > 0 && (
               <div className="space-y-3">
                 {needsNote && (
-                  <div><label className="label" htmlFor="note">Note (required for some actions)</label>
+                  <div><div className="flex items-center justify-between"><label className="label" htmlFor="note">Note (required for some actions)</label>
+                    {app.availableActions.some((a) => a.key === 'deficiency') && (
+                      <button type="button" className="mb-1.5 text-[12px] text-brand hover:underline" disabled={busy === 'draft'} onClick={() => void draftNote()}>{busy === 'draft' ? 'Drafting…' : '✎ Draft from findings'}</button>
+                    )}</div>
                     <textarea id="note" className="input min-h-20" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason, observations, or what was corrected…" /></div>
                 )}
                 <ErrorNote message={actionError} />
@@ -201,6 +268,16 @@ export default function ApplicationPage() {
             )}
             {actionError && app.availableActions.length === 0 && <ErrorNote message={actionError} />}
             {app.context.recommendation && <p className="mt-3 text-xs text-ink2">Committee recommendation: <b>{app.context.recommendation}</b></p>}
+          </Card>
+
+          <Card title="Communications">
+            <div className="flex flex-col gap-2 text-sm">
+              <button className="btn-ghost justify-start" disabled={!!busy} onClick={() => void openPdf('case-summary.pdf')}>▤ Case summary (PDF)</button>
+              {app.audit.some((a) => a.event === 'RAISE_DEFICIENCY') && (
+                <button className="btn-ghost justify-start" disabled={!!busy} onClick={() => void openPdf('deficiency-letter.pdf')}>✉ Deficiency letter (PDF)</button>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-muted">Generated from the audit trail and automated checks, so they never drift from the record.</p>
           </Card>
 
           <Card title="Audit trail">
