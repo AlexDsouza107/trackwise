@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ai:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r ai/requirements.txt
+      - run: python -m pytest
+        working-directory: ai
+
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: tw_e2e }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 3s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: api/package-lock.json }
+      - name: Start the AI service
+        run: |
+          pip install -r ai/requirements.txt
+          (cd ai && nohup python -m uvicorn app.main:app --port 8000 > ../ai.log 2>&1 &)
+      - run: npm ci
+        working-directory: api
+      - run: npm run typecheck
+        working-directory: api
+      - run: npm test
+        working-directory: api
+      - name: End-to-end tests (real Postgres and AI service, in-memory storage and queues)
+        run: npm run test:e2e
+        working-directory: api
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/tw_e2e
+          AI_URL: http://localhost:8000
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm ci
+        working-directory: web
+      - run: npx tsc --noEmit
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+
+  # Builds every image and runs the real six-service stack (Postgres, Redis, MinIO, AI, API, web), then smoke-tests it.
+  docker:
+    runs-on: ubuntu-latest
+    needs: [ai, api, web]
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose up
+        run: docker compose up -d --build
+      - name: Smoke test
+        run: ./infra/smoke.sh
+        env: { API: 'http://localhost:4000', WEB: 'http://localhost:3000' }
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
