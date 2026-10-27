@@ -21,8 +21,8 @@ export class ApplicationsController {
   }
 
   @Get('applications')
-  list(@CurrentUser() u: AuthUser, @Query('scope') scope?: string, @Query('state') state?: string) {
-    return this.svc.list(u, scope === 'queue' ? 'queue' : scope === 'all' ? 'all' : 'mine', state);
+  list(@CurrentUser() u: AuthUser, @Query('scope') scope?: string, @Query('state') state?: string, @Query('region') region?: string) {
+    return this.svc.list(u, scope === 'queue' ? 'queue' : scope === 'all' ? 'all' : 'mine', state, region);
   }
 
   @Post('applications')

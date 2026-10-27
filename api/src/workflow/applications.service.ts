@@ -3,17 +3,20 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundEx
 import { z } from 'zod';
 import { AiClient } from '../ai/ai.client';
 import { NotificationsService } from '../alerts/notifications.service';
+import { assertRegionAccess, effectiveRegion } from '../common/access';
 import { ApplicationType, AuthUser, REQUIRED_DOCUMENTS, Role, TYPE_LABELS } from '../common/types';
 import { Metrics } from '../compliance/engine';
 import { ComplianceService, periodOf } from '../compliance/compliance.service';
 import { DbService } from '../db/db.service';
 import { StorageService } from '../storage/storage.service';
+import { WorkflowConfigService } from './config.service';
+import { EvcService, EvcVisit } from './evc.service';
 import {
-  ACTIONS, ActionDef, AppContext, AppEvent, AppState, canSend, FINAL_STATES, Persisted, send, SLA_HOURS,
+  ACTIONS, ActionDef, AppContext, AppEvent, AppState, canSend, FINAL_STATES, nextStage, Persisted, ReviewStage, send, STATE_LABELS,
 } from './machine';
 
 const HOUR = 3_600_000;
-export const SYSTEM_ACTOR: AuthUser = { id: 0, name: 'TrackWise System', email: 'system@trackwise.local', role: 'admin', institutionId: null };
+export const SYSTEM_ACTOR: AuthUser = { id: 0, name: 'TrackWise System', email: 'system@trackwise.local', role: 'admin', institutionId: null, region: null };
 
 const num = z.coerce.number().nonnegative();
 export const DETAIL_SCHEMAS: Record<ApplicationType, z.ZodTypeAny> = {
@@ -44,16 +47,17 @@ export interface ApplicationRow {
 /** Roles that own a queue state. */
 const STATE_OWNERS: Partial<Record<AppState, Role>> = {
   submitted: 'officer', document_scrutiny: 'officer', compliance_check: 'officer',
-  committee_review: 'committee', decision: 'admin',
+  evc_visit: 'regional', committee_review: 'committee', decision: 'admin',
 };
 const QUEUE_STATES: Record<Role, AppState[]> = {
   institution: ['draft', 'deficiency'],
   officer: ['submitted', 'document_scrutiny', 'compliance_check'],
   committee: ['committee_review'],
+  regional: ['evc_visit'],
   admin: ['decision'],
 };
 
-const label = (s: string) => s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+const label = (s: string) => STATE_LABELS[s as AppState] ?? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 
 @Injectable()
 export class ApplicationsService {
@@ -65,11 +69,13 @@ export class ApplicationsService {
     private readonly ai: AiClient,
     private readonly compliance: ComplianceService,
     private readonly notifications: NotificationsService,
+    private readonly config: WorkflowConfigService,
+    private readonly evc: EvcService,
   ) {}
 
   // ---------- reads ----------
 
-  async list(user: AuthUser, scope: 'mine' | 'queue' | 'all', state?: string) {
+  async list(user: AuthUser, scope: 'mine' | 'queue' | 'all', state?: string, regionFilter?: string) {
     const params: unknown[] = [];
     const where: string[] = [];
     if (user.role === 'institution') {
@@ -77,7 +83,12 @@ export class ApplicationsService {
       where.push(`a.institution_id = $${params.length}`);
     } else if (scope === 'queue') {
       params.push(QUEUE_STATES[user.role]);
-      where.push(`a.state = any($${params.length})`);
+      let q = `a.state = any($${params.length})`;
+      if (user.role === 'committee') { // committee members also see EVC visits they are assigned to
+        params.push(user.id);
+        q = `(${q} or (a.state = 'evc_visit' and exists (select 1 from evc_visits v where v.application_id = a.id and $${params.length} = any(v.member_ids))))`;
+      }
+      where.push(q);
     } else {
       where.push(`a.state <> 'draft'`);
     }
@@ -85,10 +96,15 @@ export class ApplicationsService {
       params.push(state);
       where.push(`a.state = $${params.length}`);
     }
+    const region = effectiveRegion(user, regionFilter);
+    if (region) {
+      params.push(region);
+      where.push(`i.region = $${params.length}`);
+    }
     return this.db.query(
       `select a.id, a.reference, a.type, a.title, a.state, a.stage_entered_at, a.sla_due_at, a.risk_score, a.risk_level,
               a.submitted_at, a.decided_at, a.context->>'deficiencyRounds' as deficiency_rounds,
-              i.name as institution_name, i.city,
+              i.name as institution_name, i.city, i.region,
               case when a.sla_due_at is null then null else extract(epoch from (a.sla_due_at - now()))/3600 end as sla_hours_left
          from applications a join institutions i on i.id = a.institution_id
         where ${where.join(' and ')}
@@ -100,28 +116,42 @@ export class ApplicationsService {
   async get(user: AuthUser, id: number) {
     const app = await this.row(id);
     if (user.role === 'institution' && user.institutionId !== app.institution_id) throw new ForbiddenException();
-    const [institution, documents, audit] = await Promise.all([
-      this.db.one('select id, name, code, city, state, approval_valid_until from institutions where id=$1', [app.institution_id]),
-      this.db.query('select id, doc_type, filename, content_type, size_bytes, uploaded_at from documents where application_id=$1 order by id', [id]),
+    const [institution, documents, audit, evc, validity] = await Promise.all([
+      this.db.one<{ region: string | null }>('select id, name, code, city, state, region, approval_valid_until from institutions where id=$1', [app.institution_id]),
+      this.db.query('select id, doc_type, filename, content_type, size_bytes, source, uploaded_at from documents where application_id=$1 order by id', [id]),
       this.db.query('select * from audit_log where application_id=$1 order by id', [id]),
+      this.evc.forApplication(id),
+      this.db.query(
+        `select kind, valid_until, renewal is not null as renewal_pending from institution_documents where institution_id=$1 order by valid_until`,
+        [app.institution_id]),
     ]);
+    assertRegionAccess(user, institution?.region ?? null);
     return {
       ...app,
       typeLabel: TYPE_LABELS[app.type],
       institution,
       documents,
       audit,
+      evc,
+      validity,
+      route: app.context.route ?? [],
+      nextStage: nextStage(app.context.route, ['draft', 'submitted', 'deficiency'].includes(app.state) ? null : app.state),
       requiredDocuments: REQUIRED_DOCUMENTS[app.type],
-      availableActions: this.availableActions(app, user),
+      availableActions: this.availableActions(app, user, evc),
     };
   }
 
-  availableActions(app: ApplicationRow, user: AuthUser) {
+  availableActions(app: ApplicationRow, user: AuthUser, evc: EvcVisit | null = null) {
     if (user.role === 'institution' && user.institutionId !== app.institution_id) return [];
     const p: Persisted = { state: app.state, context: app.context };
     return ACTIONS.filter((a) => a.roles.includes(user.role))
-      .filter((a) => canSend(p, this.buildEvent(a, app)))
-      .map((a) => ({ key: a.key, label: a.label, tone: a.tone, requiresNote: a.requiresNote }));
+      .filter((a) => canSend(p, this.buildEvent(a, app, evc)))
+      .filter((a) => a.event !== 'COMPLETE_EVC' || user.role !== 'committee' || !!evc?.member_ids.includes(user.id))
+      .map((a) => ({
+        key: a.key, tone: a.tone, requiresNote: a.requiresNote,
+        label: ['PASS_SCRUTINY', 'CLEAR_COMPLIANCE', 'COMPLETE_EVC'].includes(a.event)
+          ? `${a.label}: send to ${label(nextStage(app.context.route, app.state))}` : a.label,
+      }));
   }
 
   private async row(id: number): Promise<ApplicationRow> {
@@ -140,7 +170,7 @@ export class ApplicationsService {
       `insert into applications (reference, institution_id, type, title, details, state, context, stage_entered_at, created_by, created_at, updated_at)
        values ('pending', $1,$2,$3,$4,'draft',$5,$6,$7,$6,$6) returning id`,
       [user.institutionId, input.type, input.title, JSON.stringify(parsed.data),
-        JSON.stringify({ deficiencyFrom: null, deficiencyRounds: 0, recommendation: null } satisfies AppContext), at, user.id],
+        JSON.stringify({ deficiencyFrom: null, deficiencyRounds: 0, recommendation: null, route: await this.config.routeFor(input.type) } satisfies AppContext), at, user.id],
     );
     const id = row!.id;
     await this.db.query('update applications set reference=$2 where id=$1', [id, `TW-${at.getFullYear()}-${String(id).padStart(4, '0')}`]);
@@ -149,7 +179,7 @@ export class ApplicationsService {
   }
 
   async uploadDocument(
-    user: AuthUser, id: number, file: { docType: string; filename: string; contentType: string; buffer: Buffer }, at = new Date(),
+    user: AuthUser, id: number, file: { docType: string; filename: string; contentType: string; buffer: Buffer; source?: string }, at = new Date(),
   ) {
     const app = await this.row(id);
     if (user.role !== 'institution' || user.institutionId !== app.institution_id) throw new ForbiddenException();
@@ -164,11 +194,12 @@ export class ApplicationsService {
     const key = `applications/${id}/${Date.now()}-${file.filename.replace(/[^\w.-]/g, '_')}`;
     await this.storage.put(key, file.buffer, file.contentType);
     const doc = await this.db.one(
-      `insert into documents (application_id, doc_type, filename, content_type, size_bytes, sha256, storage_key, uploaded_by, uploaded_at)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id, doc_type, filename, size_bytes`,
-      [id, file.docType, file.filename, file.contentType, file.buffer.length, sha256, key, user.id, at],
+      `insert into documents (application_id, doc_type, filename, content_type, size_bytes, sha256, storage_key, source, uploaded_by, uploaded_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id, doc_type, filename, size_bytes, source`,
+      [id, file.docType, file.filename, file.contentType, file.buffer.length, sha256, key, file.source ?? 'upload', user.id, at],
     );
-    await this.audit(id, 'DOCUMENT_UPLOADED', app.state, app.state, user, `${label(file.docType)}: ${file.filename}`, at);
+    await this.audit(id, file.source ? 'DOCUMENT_FETCHED' : 'DOCUMENT_UPLOADED', app.state, app.state, user,
+      `${label(file.docType)}: ${file.filename}${file.source ? ` (via ${file.source})` : ''}`, at);
     await this.refresh(id);
     return doc;
   }
@@ -195,17 +226,24 @@ export class ApplicationsService {
   async download(user: AuthUser, appId: number, docId: number) {
     const app = await this.row(appId);
     if (user.role === 'institution' && user.institutionId !== app.institution_id) throw new ForbiddenException();
+    assertRegionAccess(user, await this.regionOfInstitution(app.institution_id));
     const doc = await this.db.one<{ filename: string; content_type: string; storage_key: string }>(
       'select filename, content_type, storage_key from documents where id=$1 and application_id=$2', [docId, appId]);
     if (!doc) throw new NotFoundException('Document not found');
     return { ...doc, buffer: await this.storage.get(doc.storage_key) };
   }
 
-  private buildEvent(def: ActionDef, app: ApplicationRow): AppEvent {
+  private buildEvent(def: ActionDef, app: ApplicationRow, evc: EvcVisit | null = null, route?: ReviewStage[]): AppEvent {
     if (def.event === 'CLEAR_COMPLIANCE') {
       return { type: 'CLEAR_COMPLIANCE', criticalFailures: Number(app.compliance?.criticalFailures ?? 0) };
     }
+    if (def.event === 'COMPLETE_EVC') return { type: 'COMPLETE_EVC', reportFiled: evc?.status === 'completed' };
+    if (def.event === 'SUBMIT') return { type: 'SUBMIT', route };
     return { type: def.event, ...(def.payload ?? {}) } as AppEvent;
+  }
+
+  private async regionOfInstitution(institutionId: number): Promise<string | null> {
+    return (await this.db.one<{ region: string | null }>('select region from institutions where id=$1', [institutionId]))?.region ?? null;
   }
 
   /** Entry point for user-driven actions: checks role, ownership and note requirements. */
@@ -215,22 +253,31 @@ export class ApplicationsService {
     const app = await this.row(id);
     if (!def.roles.includes(user.role)) throw new ForbiddenException('Your role cannot perform this action');
     if (user.role === 'institution' && user.institutionId !== app.institution_id) throw new ForbiddenException();
+    assertRegionAccess(user, await this.regionOfInstitution(app.institution_id));
     if (def.requiresNote && !note?.trim()) throw new BadRequestException('A note is required for this action');
     if (def.event === 'CLEAR_COMPLIANCE' && Number(app.compliance?.criticalFailures ?? 0) > 0) {
       throw new BadRequestException('Critical compliance failures block clearance. Raise a deficiency instead.');
     }
+    let evc: EvcVisit | null = null;
+    if (def.event === 'COMPLETE_EVC') {
+      evc = await this.evc.forApplication(id);
+      if (evc?.status !== 'completed') throw new BadRequestException('Record the EVC visit report before completing this stage.');
+      if (user.role === 'committee' && !evc.member_ids.includes(user.id)) throw new ForbiddenException('Only assigned visit members can complete the EVC stage');
+    }
     // Missing documents do not block SUBMIT: the AI check flags them and scrutiny can raise a deficiency.
-    return this.dispatch(id, this.buildEvent(def, app), user, note, at);
+    const route = def.event === 'SUBMIT' ? await this.config.routeFor(app.type) : undefined;
+    return this.dispatch(id, this.buildEvent(def, app, evc, route), user, note, at);
   }
 
   /** Applies an event atomically, audit-logs it, then runs entry side effects (which may chain further events). */
   async dispatch(id: number, event: AppEvent, actor: AuthUser, note?: string, at = new Date()): Promise<ApplicationRow> {
+    const sla = await this.config.slaHours();
     const { app, from } = await this.db.tx(async (c) => {
       const cur = (await c.query<ApplicationRow>('select * from applications where id=$1 for update', [id])).rows[0];
       if (!cur) throw new NotFoundException('Application not found');
       const next = send({ state: cur.state, context: cur.context }, event);
       if (!next) throw new BadRequestException(`Event ${event.type} is not allowed in state "${cur.state}"`);
-      const hours = SLA_HOURS[next.state];
+      const hours = sla[next.state];
       const due = hours ? new Date(at.getTime() + hours * HOUR) : null;
       const final = FINAL_STATES.includes(next.state);
       const updated = (await c.query<ApplicationRow>(
@@ -264,10 +311,11 @@ export class ApplicationsService {
     }
     const owner = STATE_OWNERS[app.state];
     if (owner && app.state !== 'submitted') {
+      const hours = (await this.config.slaHours())[app.state];
       await this.notifications.notifyRole(owner, {
         kind: 'QUEUE', title: `New in your queue: ${app.reference}`, link,
-        body: `${app.title} is now in ${stage} (SLA ${SLA_HOURS[app.state]}h).`,
-      });
+        body: `${app.title} is now in ${stage}${hours ? ` (SLA ${hours}h)` : ''}.`,
+      }, owner === 'regional' ? await this.regionOfInstitution(app.institution_id) : null);
     }
 
     switch (app.state) {
@@ -278,6 +326,9 @@ export class ApplicationsService {
       case 'document_scrutiny':
       case 'compliance_check':
         await this.refresh(app.id);
+        break;
+      case 'evc_visit':
+        await this.evc.open(app.id);
         break;
       case 'approved':
         await this.grantApproval(app, at);

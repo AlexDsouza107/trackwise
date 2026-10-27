@@ -7,6 +7,7 @@ create table if not exists institutions (
   state text not null,
   city text not null,
   status text not null default 'active',
+  region text,
   approval_valid_until date,
   is_demo boolean not null default true,
   created_at timestamptz not null default now()
@@ -16,7 +17,8 @@ create table if not exists users (
   email text unique not null,
   name text not null,
   password_hash text not null,
-  role text not null check (role in ('institution','officer','committee','admin')),
+  role text not null,
+  region text,
   institution_id int references institutions(id),
   created_at timestamptz not null default now()
 );
@@ -52,6 +54,7 @@ create table if not exists documents (
   size_bytes int not null,
   sha256 text not null,
   storage_key text not null,
+  source text not null default 'upload',
   uploaded_by int references users(id),
   uploaded_at timestamptz not null default now()
 );
@@ -151,4 +154,52 @@ create table if not exists email_outbox (
   created_at timestamptz not null default now(),
   sent_at timestamptz
 );
+create table if not exists workflow_routes (
+  application_type text primary key,
+  stages jsonb not null,
+  updated_by text,
+  updated_at timestamptz not null default now()
+);
+create table if not exists sla_config (
+  state text primary key,
+  hours int not null check (hours > 0)
+);
+create table if not exists evc_visits (
+  id serial primary key,
+  application_id int not null unique references applications(id) on delete cascade,
+  round int not null default 1,
+  status text not null default 'awaiting_schedule' check (status in ('awaiting_schedule','scheduled','completed')),
+  scheduled_for timestamptz,
+  venue text,
+  member_ids int[] not null default '{}',
+  scheduled_by_name text,
+  scheduled_at timestamptz,
+  report jsonb,
+  created_at timestamptz not null default now()
+);
+create table if not exists institution_documents (
+  id serial primary key,
+  institution_id int not null references institutions(id),
+  kind text not null,
+  reference text,
+  valid_until date not null,
+  filename text not null,
+  content_type text not null,
+  size_bytes int not null,
+  sha256 text not null,
+  storage_key text not null,
+  uploaded_by int references users(id),
+  uploaded_at timestamptz not null default now(),
+  renewal jsonb,
+  verified_at timestamptz,
+  verified_by_name text,
+  history jsonb not null default '[]',
+  unique (institution_id, kind)
+);
+-- Idempotent migrations for databases created by earlier versions.
+alter table institutions add column if not exists region text;
+alter table users add column if not exists region text;
+alter table documents add column if not exists source text not null default 'upload';
+alter table users drop constraint if exists users_role_check;
+alter table users add constraint users_role_check check (role in ('institution','officer','committee','regional','admin'));
 `;

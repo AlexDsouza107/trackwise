@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { z } from 'zod';
 import { DbService } from '../db/db.service';
 import { DEFAULT_RULES, evaluateAll, Metrics, Rule } from './engine';
 
@@ -11,6 +12,18 @@ interface MetricsRow {
   annual_fee: number;
   period: Date;
 }
+
+const PARAM_SCHEMAS: Record<string, z.ZodTypeAny> = {
+  faculty_ratio: z.object({ maxRatio: z.number().positive() }).strict(),
+  infrastructure: z.object({ minSqmPerStudent: z.number().positive(), minLabs: z.number().int().min(0) }).strict(),
+  accreditation: z.object({ warnDays: z.number().int().min(0) }).strict(),
+  fee_norms: z.object({ maxAnnualFee: z.number().positive() }).strict(),
+};
+export const RulePatchDto = z.object({
+  weight: z.number().positive().max(10).optional(),
+  severity: z.enum(['critical', 'major', 'minor']).optional(),
+  params: z.record(z.string(), z.number()).optional(),
+});
 
 export const periodOf = (d: Date): string => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
 
@@ -40,6 +53,30 @@ export class ComplianceService implements OnModuleInit {
   async rules(): Promise<Rule[]> {
     const rows = await this.db.query<Rule & { weight: string }>('select * from compliance_rules order by code');
     return rows.map((r) => ({ ...r, weight: Number(r.weight) }));
+  }
+
+  async updateRule(code: string, patch: z.infer<typeof RulePatchDto>): Promise<Rule> {
+    const rule = (await this.rules()).find((r) => r.code === code);
+    if (!rule) throw new NotFoundException('Unknown rule');
+    let params = rule.params;
+    if (patch.params) {
+      const parsed = PARAM_SCHEMAS[code]?.safeParse(patch.params);
+      if (!parsed?.success) throw new BadRequestException(`Invalid parameters for ${code}: ${parsed?.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`);
+      params = parsed.data;
+    }
+    await this.db.query('update compliance_rules set weight=$2, severity=$3, params=$4 where code=$1',
+      [code, patch.weight ?? rule.weight, patch.severity ?? rule.severity, JSON.stringify(params)]);
+    return (await this.rules()).find((r) => r.code === code)!;
+  }
+
+  /** Re-evaluates every active institution on its latest metrics (used after rule thresholds change). */
+  async evaluateAllActive(): Promise<number> {
+    const ids = await this.db.query<{ id: number }>("select id from institutions where status='active' order by id");
+    let n = 0;
+    for (const { id } of ids) {
+      try { await this.evaluateInstitution(id); n++; } catch { /* no metrics recorded */ }
+    }
+    return n;
   }
 
   async latestMetrics(institutionId: number): Promise<{ metrics: Metrics; period: string } | null> {
@@ -90,10 +127,11 @@ export class ComplianceService implements OnModuleInit {
     return { metrics, ...evaluateAll(rules, metrics, now) };
   }
 
-  async overview() {
+  async overview(region?: string | null) {
     const rules = await this.rules();
-    const institutions = await this.db.query<{ id: number; name: string; city: string; state: string; code: string; approval_valid_until: Date | null }>(
-      'select id, name, city, state, code, approval_valid_until from institutions where status=\'active\' order by name');
+    const institutions = await this.db.query<{ id: number; name: string; city: string; state: string; region: string | null; code: string; approval_valid_until: Date | null }>(
+      'select id, name, city, state, region, code, approval_valid_until from institutions where status=\'active\' and ($1::text is null or region=$1) order by name',
+      [region ?? null]);
     const scores = await this.db.query<{ institution_id: number; period: Date; score: string }>(
       'select institution_id, period, score from compliance_scores order by period');
     const results = await this.db.query<{ institution_id: number; period: Date; rule_code: string; passed: boolean; score: string; detail: string }>(

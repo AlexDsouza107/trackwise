@@ -14,6 +14,7 @@ interface UserRow {
   email: string;
   role: Role;
   institution_id: number | null;
+  region: string | null;
   password_hash: string;
 }
 
@@ -35,6 +36,7 @@ export class AuthController {
       email: row.email,
       role: row.role,
       institutionId: row.institution_id,
+      region: row.region,
     };
     return { token: await this.jwt.signAsync(user), user };
   }
@@ -49,9 +51,9 @@ export class AuthController {
   @Get('demo-accounts')
   async demoAccounts() {
     return this.db.query(
-      `select u.email, u.name, u.role, i.name as institution
+      `select u.email, u.name, u.role, u.region, i.name as institution
          from users u left join institutions i on i.id = u.institution_id
-        order by array_position(array['admin','officer','committee','institution'], u.role), u.id`,
+        order by array_position(array['admin','officer','regional','committee','institution'], u.role), u.id`,
     );
   }
 }

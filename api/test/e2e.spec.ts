@@ -51,6 +51,15 @@ async function login(key: string, email: string) {
   tokens[key] = (await call('POST', '/auth/login', undefined, { email, password: 'demo1234' })).body.token;
 }
 
+async function postForm<T = any>(path: string, who: string, fields: Record<string, string>, fileName = 'doc.pdf'): Promise<{ status: number; body: T }> {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  form.append('file', new Blob([Buffer.alloc(900, fileName)], { type: 'application/pdf' }), fileName);
+  const res = await fetch(base + path, { method: 'POST', headers: { authorization: `Bearer ${tokens[who]}` }, body: form });
+  const text = await res.text();
+  return { status: res.status, body: (text ? JSON.parse(text) : null) as T };
+}
+
 async function upload(appId: number, who: string, docType: string) {
   const form = new FormData();
   form.append('docType', docType);
@@ -72,6 +81,10 @@ before(async () => {
   await login('officer', 'officer1@trackwise.demo');
   await login('committee', 'committee1@trackwise.demo');
   await login('admin', 'admin@trackwise.demo');
+  await login('committee2', 'committee2@trackwise.demo');
+  await login('regW', 'regional4@trackwise.demo'); // Western
+  await login('regN', 'regional1@trackwise.demo'); // Northern
+  await login('inst3', 'inst03@trackwise.demo');
 });
 
 after(async () => {
@@ -90,7 +103,7 @@ describe('seed', () => {
     assert.ok(files.size > 50);
     const all = await call<any[]>('GET', '/applications?scope=all', 'admin');
     const states = new Set(all.body.map((a) => a.state));
-    for (const s of ['document_scrutiny', 'compliance_check', 'committee_review', 'decision', 'deficiency', 'approved', 'rejected']) {
+    for (const s of ['document_scrutiny', 'compliance_check', 'evc_visit', 'committee_review', 'decision', 'deficiency', 'approved', 'rejected']) {
       assert.ok(states.has(s), `seed should include state ${s}`);
     }
   });
@@ -222,10 +235,10 @@ describe('access control', () => {
 describe('alerts, compliance and analytics', () => {
   test('scan is idempotent and covers all three alert kinds with escalation levels', async () => {
     const first = (await call('POST', '/alerts/scan', 'admin')).body;
-    assert.deepEqual(first, { sla: 0, expiring: 0, missingDocs: 0 }, 'seed already scanned; nothing new');
+    assert.deepEqual(first, { sla: 0, expiring: 0, missingDocs: 0, documents: 0, evc: 0 }, 'seed already scanned; nothing new');
     const alerts = (await call<any[]>('GET', '/alerts', 'admin')).body;
     const kinds = new Set(alerts.map((a) => a.kind));
-    assert.deepEqual([...kinds].sort(), ['APPROVAL_EXPIRING', 'MISSING_DOCUMENTS', 'SLA_BREACH']);
+    assert.deepEqual([...kinds].sort(), ['APPROVAL_EXPIRING', 'DOCUMENT_EXPIRING', 'EVC_REPORT_OVERDUE', 'EVC_UNSCHEDULED', 'EVC_VISIT_REMINDER', 'MISSING_DOCUMENTS', 'SLA_BREACH']);
     assert.ok(alerts.some((a) => a.kind === 'SLA_BREACH' && a.level >= 2), 'long-overdue items escalate to admin');
     const adminInbox = (await call('GET', '/notifications', 'admin')).body;
     assert.ok(adminInbox.unread > 0);
@@ -256,3 +269,140 @@ describe('alerts, compliance and analytics', () => {
   });
 });
 
+
+const intake = (title: string) => ({
+  type: 'intake_increase', title,
+  details: { courseName: 'B.Tech CSE', currentIntake: 60, proposedIntake: 66, justification: 'Modest expansion.' },
+});
+const INTAKE_DOCS = ['application_form', 'faculty_list', 'infrastructure_certificate', 'previous_approval_letter', 'fee_structure'];
+const nextHour = () => new Date(Date.now() + 48 * 3_600_000).toISOString();
+
+describe('routing and the Expert Visit Committee', () => {
+  test('application types follow their configured route', async () => {
+    const course = (await call('POST', '/applications', 'inst', newCourse('E2E route check'))).body;
+    assert.deepEqual(course.context.route, ['document_scrutiny', 'compliance_check', 'committee_review']);
+    const all = (await call<any[]>('GET', '/applications?scope=all', 'admin')).body;
+    const ext = all.find((a) => a.type === 'extension_of_approval' && a.state === 'approved');
+    const extDetail = (await call('GET', `/applications/${ext.id}`, 'admin')).body;
+    const stages = extDetail.audit.filter((a: any) => a.from_state !== a.to_state && a.from_state).map((a: any) => a.to_state);
+    assert.ok(!stages.includes('committee_review') && !stages.includes('evc_visit'), 'extensions skip committee and EVC');
+  });
+
+  test('intake increase: scrutiny > compliance > EVC (schedule, report, complete) > committee > decision', async () => {
+    const created = (await call('POST', '/applications', 'inst', intake('E2E EVC flow'))).body;
+    assert.ok(created.context.route.includes('evc_visit'));
+    for (const d of INTAKE_DOCS) await upload(created.id, 'inst', d);
+    await call('POST', `/applications/${created.id}/actions`, 'inst', { action: 'submit' });
+    await call('POST', `/applications/${created.id}/actions`, 'officer', { action: 'pass' });
+    let a = (await call('POST', `/applications/${created.id}/actions`, 'officer', { action: 'clear' })).body;
+    assert.equal(a.state, 'evc_visit');
+    assert.equal(a.evc.status, 'awaiting_schedule');
+    assert.ok(a.sla_due_at, 'EVC stage has an SLA');
+
+    const queue = (await call<any[]>('GET', '/applications?scope=queue', 'regW')).body;
+    assert.ok(queue.some((q) => q.id === created.id), 'regional officer of the region sees it');
+    assert.equal((await call<any[]>('GET', '/applications?scope=queue', 'regN')).body.some((q) => q.id === created.id), false, 'other regions do not');
+    assert.equal((await call('GET', `/applications/${created.id}`, 'regN')).status, 403);
+
+    const members = (await call<any[]>('GET', '/evc/members', 'regW')).body;
+    const c1 = members.find((m) => m.name.includes('Banerjee')).id;
+    assert.equal((await call('POST', `/applications/${created.id}/actions`, 'regW', { action: 'evc_complete', note: 'x' })).status, 400, 'cannot complete before a report');
+    const past = await call('POST', `/applications/${created.id}/evc/schedule`, 'regW', { scheduledFor: '2020-01-01T10:00:00Z', venue: 'Campus', memberIds: [c1] });
+    assert.equal(past.status, 400);
+    assert.equal((await call('POST', `/applications/${created.id}/evc/schedule`, 'regN', { scheduledFor: nextHour(), venue: 'Campus', memberIds: [c1] })).status, 403);
+    assert.equal((await call('POST', `/applications/${created.id}/evc/schedule`, 'officer', { scheduledFor: nextHour(), venue: 'Campus', memberIds: [c1] })).status, 403);
+    const sched = await call('POST', `/applications/${created.id}/evc/schedule`, 'regW', { scheduledFor: nextHour(), venue: 'Campus', memberIds: [c1] });
+    assert.equal(sched.status, 201, JSON.stringify(sched.body));
+    assert.equal(sched.body.status, 'scheduled');
+
+    const report = { outcome: 'satisfactory', findings: 'All facilities verified on site.' };
+    assert.equal((await call('POST', `/applications/${created.id}/evc/report`, 'committee2', report)).status, 403, 'unassigned member');
+    assert.equal((await call('POST', `/applications/${created.id}/evc/report`, 'committee', { outcome: 'satisfactory', findings: 'short' })).status, 400);
+    assert.equal((await call('POST', `/applications/${created.id}/evc/report`, 'committee', report)).status, 201);
+
+    const view = (await call('GET', `/applications/${created.id}`, 'committee')).body;
+    assert.ok(view.availableActions.some((x: any) => x.key === 'evc_complete'));
+    assert.match(view.availableActions.find((x: any) => x.key === 'evc_complete').label, /Expert Committee Review/);
+    assert.equal((await call('GET', `/applications/${created.id}`, 'committee2')).body.availableActions.some((x: any) => x.key === 'evc_complete'), false);
+    a = (await call('POST', `/applications/${created.id}/actions`, 'committee', { action: 'evc_complete', note: 'Report accepted' })).body;
+    assert.equal(a.state, 'committee_review');
+    await call('POST', `/applications/${created.id}/actions`, 'committee', { action: 'rec_approve', note: 'Fine' });
+    a = (await call('POST', `/applications/${created.id}/actions`, 'admin', { action: 'approve' })).body;
+    assert.equal(a.state, 'approved');
+    const events = a.audit.map((x: any) => x.event);
+    for (const e of ['EVC_SCHEDULED', 'EVC_REPORT_FILED', 'COMPLETE_EVC']) assert.ok(events.includes(e), e);
+  });
+
+  test('a deficiency raised during EVC returns there and opens a new visit round', async () => {
+    const created = (await call('POST', '/applications', 'inst', intake('E2E EVC deficiency'))).body;
+    for (const d of INTAKE_DOCS) await upload(created.id, 'inst', d);
+    await call('POST', `/applications/${created.id}/actions`, 'inst', { action: 'submit' });
+    await call('POST', `/applications/${created.id}/actions`, 'officer', { action: 'pass' });
+    await call('POST', `/applications/${created.id}/actions`, 'officer', { action: 'clear' });
+    const def = (await call('POST', `/applications/${created.id}/actions`, 'regW', { action: 'deficiency', note: 'Site not ready for visit' })).body;
+    assert.equal(def.state, 'deficiency');
+    const back = (await call('POST', `/applications/${created.id}/actions`, 'inst', { action: 'resubmit', note: 'Site ready' })).body;
+    assert.equal(back.state, 'evc_visit');
+    assert.equal(back.evc.round, 2);
+    assert.equal(back.evc.status, 'awaiting_schedule');
+  });
+});
+
+describe('regions', () => {
+  test('regional officers are limited to their region; other roles can filter', async () => {
+    const all = (await call<any[]>('GET', '/applications?scope=all', 'regN')).body;
+    assert.ok(all.length > 0 && all.every((a) => a.region === 'Northern'));
+    const west = (await call<any[]>('GET', '/applications?scope=all&region=Western', 'admin')).body;
+    assert.ok(west.length > 0 && west.every((a) => a.region === 'Western'));
+    const forced = (await call<any[]>('GET', '/applications?scope=all&region=Southern', 'regN')).body;
+    assert.ok(forced.every((a) => a.region === 'Northern'), 'a regional officer cannot widen the filter');
+    const sum = (await call('GET', '/analytics/summary?region=Southern', 'admin')).body;
+    assert.equal(sum.region, 'Southern');
+    assert.deepEqual(sum.byRegion.map((r: any) => r.region), ['Southern']);
+    const national = (await call('GET', '/analytics/summary', 'admin')).body;
+    assert.deepEqual(national.byRegion.map((r: any) => r.region).sort(), ['Central', 'Eastern', 'Northern', 'Southern', 'Western']);
+    assert.ok(national.evc.awaitingSchedule >= 1 && national.evc.reportOverdue >= 1);
+    const heat = (await call('GET', '/compliance/overview', 'regN')).body;
+    assert.ok(heat.institutions.length > 0 && heat.institutions.every((i: any) => i.region === 'Northern'));
+  });
+});
+
+describe('document validity register', () => {
+  test('lease and prescribed documents: statuses, renewal, verification', async () => {
+    const mine = (await call<any[]>('GET', '/validity', 'inst')).body;
+    assert.ok(mine.length >= 2 && mine.every((d) => d.institution_id === mine[0].institution_id));
+    const all = (await call<any[]>('GET', '/validity', 'admin')).body;
+    const statuses = new Set(all.map((d) => d.status));
+    for (const st of ['valid', 'expiring', 'expired', 'renewal_pending']) assert.ok(statuses.has(st), st);
+    assert.ok(all.some((d) => d.kind === 'lease_deed'));
+    assert.equal((await call<any[]>('GET', '/validity?status=expired', 'officer')).body.every((d) => d.status === 'expired'), true);
+
+    // inst1 renews a still-valid lease; staff verify or reject it.
+    const lease = mine.find((d) => d.kind === 'lease_deed');
+    const early = await postForm(`/validity/${lease.id}/renew`, 'inst', { validUntil: '2020-01-01' });
+    assert.equal(early.status, 400, 'renewal must extend validity');
+    assert.equal((await postForm(`/validity/${lease.id}/renew`, 'inst3', { validUntil: '2099-01-01' })).status, 403, 'other institutions cannot renew it');
+    const renewed = await postForm(`/validity/${lease.id}/renew`, 'inst', { validUntil: '2099-01-01', note: 'Renewed' });
+    assert.equal(renewed.status, 201, JSON.stringify(renewed.body));
+    assert.equal(renewed.body.status, 'renewal_pending');
+    assert.equal((await call('POST', `/validity/${lease.id}/verify`, 'inst', { decision: 'approve' })).status, 403);
+    assert.equal((await call('POST', `/validity/${lease.id}/verify`, 'officer', { decision: 'reject' })).status, 400, 'reject needs a reason');
+    const rej = (await call('POST', `/validity/${lease.id}/verify`, 'officer', { decision: 'reject', note: 'Stamp duty receipt missing' })).body;
+    assert.equal(rej.status, 'valid');
+    assert.equal(rej.valid_until, lease.valid_until, 'expiry unchanged after rejection');
+    await postForm(`/validity/${lease.id}/renew`, 'inst', { validUntil: '2099-01-01' });
+    const ok = (await call('POST', `/validity/${lease.id}/verify`, 'officer', { decision: 'approve', note: 'Checked' })).body;
+    assert.equal(ok.valid_until, '2099-01-01');
+    assert.deepEqual(ok.history.map((h: any) => h.event).slice(-4), ['RENEWAL_SUBMITTED', 'RENEWAL_REJECTED', 'RENEWAL_SUBMITTED', 'RENEWAL_VERIFIED']);
+  });
+
+  test('expiry alerts escalate by level and a later scan raises nothing new', async () => {
+    const alerts = (await call<any[]>('GET', '/alerts?kind=DOCUMENT_EXPIRING', 'admin')).body;
+    assert.ok(alerts.length >= 5);
+    assert.ok(alerts.some((a) => a.level === 4 && /expired/.test(a.message)), 'expired documents escalate to the top level');
+    const again = (await call('POST', '/alerts/scan', 'admin')).body;
+    assert.equal(again.documents, 0);
+    const west = (await call('GET', '/notifications', 'regW')).body;
+    assert.ok(west.items.some((n: any) => n.kind === 'EVC_UNSCHEDULED' || n.kind === 'QUEUE'), 'regional officer is alerted');
+  });
+});

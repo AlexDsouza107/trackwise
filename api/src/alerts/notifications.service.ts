@@ -34,8 +34,10 @@ export class NotificationsService {
     return created;
   }
 
-  async usersWithRole(role: Role): Promise<number[]> {
-    return (await this.db.query<{ id: number }>('select id from users where role=$1', [role])).map((r) => r.id);
+  /** Users with a role; when a region is given, only those bound to that region. */
+  async usersWithRole(role: Role, region?: string | null): Promise<number[]> {
+    return (await this.db.query<{ id: number }>(
+      'select id from users where role=$1 and ($2::text is null or region=$2)', [role, region ?? null])).map((r) => r.id);
   }
 
   async institutionUsers(institutionId: number): Promise<number[]> {
@@ -44,8 +46,8 @@ export class NotificationsService {
     );
   }
 
-  async notifyRole(role: Role, n: NotificationInput): Promise<number> {
-    return this.notifyUsers(await this.usersWithRole(role), n);
+  async notifyRole(role: Role, n: NotificationInput, region?: string | null): Promise<number> {
+    return this.notifyUsers(await this.usersWithRole(role, region), n);
   }
 
   async notifyInstitution(institutionId: number, n: NotificationInput): Promise<number> {

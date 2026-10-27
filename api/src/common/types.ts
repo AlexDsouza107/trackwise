@@ -1,4 +1,5 @@
-export type Role = 'institution' | 'officer' | 'committee' | 'admin';
+export type Role = 'institution' | 'officer' | 'committee' | 'regional' | 'admin';
+export const ROLES: Role[] = ['institution', 'officer', 'committee', 'regional', 'admin'];
 
 export interface AuthUser {
   id: number;
@@ -6,6 +7,8 @@ export interface AuthUser {
   email: string;
   role: Role;
   institutionId: number | null;
+  /** Regional officers (and region-bound staff) only see applications from this region. */
+  region: string | null;
 }
 
 export type ApplicationType = 'new_institution' | 'new_course' | 'intake_increase' | 'extension_of_approval';
