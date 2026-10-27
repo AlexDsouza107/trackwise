@@ -40,18 +40,33 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  /** Retries connection-level failures only (e.g. MinIO restarting on first boot); S3 errors surface immediately. */
+  private async withRetry<T>(fn: () => Promise<T>): Promise<T> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        const transient = code === 'ECONNREFUSED' || code === 'ECONNRESET' || code === 'ETIMEDOUT';
+        if (!transient || attempt >= 15) throw err;
+        this.log.warn(`MinIO connection ${code} (attempt ${attempt}), retrying...`);
+        await sleep(2000);
+      }
+    }
+  }
+
   async put(key: string, body: Buffer, contentType: string): Promise<void> {
-    await this.s3.send(
-      new PutObjectCommand({ Bucket: config.minio.bucket, Key: key, Body: body, ContentType: contentType }),
+    await this.withRetry(() =>
+      this.s3.send(new PutObjectCommand({ Bucket: config.minio.bucket, Key: key, Body: body, ContentType: contentType })),
     );
   }
 
   async delete(key: string): Promise<void> {
-    await this.s3.send(new DeleteObjectCommand({ Bucket: config.minio.bucket, Key: key }));
+    await this.withRetry(() => this.s3.send(new DeleteObjectCommand({ Bucket: config.minio.bucket, Key: key })));
   }
 
   async get(key: string): Promise<Buffer> {
-    const res = await this.s3.send(new GetObjectCommand({ Bucket: config.minio.bucket, Key: key }));
+    const res = await this.withRetry(() => this.s3.send(new GetObjectCommand({ Bucket: config.minio.bucket, Key: key })));
     return Buffer.from(await res.Body!.transformToByteArray());
   }
 }
