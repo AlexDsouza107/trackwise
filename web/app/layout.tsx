@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'TrackWise',
+  title: 'ApproveIt - AICTE approvals. Simplified.',
   description: 'AICTE approval workflow automation, compliance monitoring and alert management (illustrative demo)',
 };
 

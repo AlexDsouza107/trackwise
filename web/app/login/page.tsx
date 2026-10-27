@@ -1,4 +1,5 @@
 'use client';
+import { LogoMark, Wordmark } from '@/components/Brand';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api, storeSession } from '@/lib/api';
@@ -50,8 +51,8 @@ export default function Login() {
     <div className={`mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-6 py-10 transition duration-500 ease-out lg:grid-cols-[1.05fr_1fr] ${welcome ? 'login-leave' : ''}`}>
       <div className="rise">
         <div className="mb-6 flex items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-[15px] bg-brand text-[18px] font-semibold text-brand-ink shadow-[0_10px_30px_-8px_var(--brand)]">TW</span>
-          <span className="text-[35px] font-semibold tracking-[-0.025em]">TrackWise</span>
+          <LogoMark size={56} />
+          <Wordmark className="text-[38px]" />
         </div>
         <h1 className="max-w-md text-[41px] font-semibold leading-[1.08] tracking-[-0.03em]">Approvals, compliance and alerts, in one calm place.</h1>
         <p className="mt-3 max-w-md text-[17px] text-ink2">Integrated approval workflow automation, compliance monitoring and alert management.</p>
@@ -94,8 +95,8 @@ export default function Login() {
       <div className="fixed inset-0 z-50 grid place-items-center" role="status" aria-live="polite">
         <div className="welcome text-center">
           <div className="relative mx-auto mb-6 grid h-20 w-20 place-items-center">
-            <span className="halo absolute inset-0 rounded-[24px] bg-brand" aria-hidden />
-            <span className="relative grid h-20 w-20 place-items-center rounded-[24px] bg-brand text-[27px] font-semibold text-brand-ink shadow-[0_18px_50px_-12px_var(--brand)]">TW</span>
+            <span className="halo absolute inset-0 rounded-[22%] bg-brand" aria-hidden />
+            <LogoMark size={80} className="relative" />
           </div>
           <div className="text-[33px] font-semibold tracking-[-0.025em]">Welcome, {firstName(welcome.name)}</div>
           <div className="mt-1.5 text-[16px] text-ink2">{LANDING[welcome.role]}</div>
