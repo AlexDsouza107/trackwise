@@ -406,3 +406,125 @@ describe('document validity register', () => {
     assert.ok(west.items.some((n: any) => n.kind === 'EVC_UNSCHEDULED' || n.kind === 'QUEUE'), 'regional officer is alerted');
   });
 });
+
+describe('communications: deficiency letter and case summary', () => {
+  test('the officer gets a draft note from the findings; the letter is generated from the deficiency', async () => {
+    const created = (await call('POST', '/applications', 'inst', newCourse('E2E letter'))).body;
+    for (const d of REQUIRED.filter((d) => d !== 'curriculum')) await upload(created.id, 'inst', d);
+    await call('POST', `/applications/${created.id}/actions`, 'inst', { action: 'submit' });
+
+    assert.equal((await call('GET', `/applications/${created.id}/draft-deficiency`, 'inst')).status, 403);
+    assert.equal((await call('GET', `/applications/${created.id}/deficiency-letter`, 'officer')).status, 400, 'no deficiency yet');
+    const draft = (await call('GET', `/applications/${created.id}/draft-deficiency`, 'officer')).body;
+    assert.match(draft.note, /Curriculum/);
+    assert.ok(draft.items.length >= 1);
+
+    await call('POST', `/applications/${created.id}/actions`, 'officer', { action: 'deficiency', note: draft.note });
+    const letter = (await call('GET', `/applications/${created.id}/deficiency-letter`, 'inst')).body;
+    assert.match(letter.reference, /\/DEF-1$/);
+    assert.equal(letter.status, 'open');
+    assert.ok(letter.dueBy);
+    assert.ok(letter.items.some((i: any) => /Curriculum/.test(i.label)));
+    assert.equal(letter.reason, draft.note);
+    assert.equal((await call('GET', `/applications/${created.id}/deficiency-letter`, 'inst2')).status, 403);
+
+    for (const [path, who] of [[`deficiency-letter.pdf`, 'inst'], [`case-summary.pdf`, 'inst'], [`case-summary.pdf`, 'admin']] as const) {
+      const res = await fetch(`${base}/applications/${created.id}/${path}`, { headers: { authorization: `Bearer ${tokens[who]}` } });
+      assert.equal(res.status, 200, path);
+      assert.equal(res.headers.get('content-type'), 'application/pdf');
+      const body = Buffer.from(await res.arrayBuffer());
+      assert.equal(body.subarray(0, 5).toString(), '%PDF-');
+      assert.ok(body.length > 1500);
+    }
+    assert.equal((await fetch(`${base}/applications/${created.id}/case-summary.pdf`, { headers: { authorization: `Bearer ${tokens.inst2}` } })).status, 403);
+
+    const summary = (await call('GET', `/applications/${created.id}/case-summary`, 'officer')).body;
+    assert.equal(summary.application.state, 'Deficiency');
+    assert.ok(summary.timeline.length >= 5);
+    assert.deepEqual(summary.missingDocuments, ['Curriculum']);
+    assert.ok(summary.ai.factors.length >= 2);
+  });
+});
+
+describe('integrations (mock adapters)', () => {
+  test('DigiLocker fetch adds a document with its source; unknown references fail cleanly', async () => {
+    const created = (await call('POST', '/applications', 'inst', { type: 'extension_of_approval', title: 'E2E fetch', details: { academicYear: '2026-27', yearsRequested: 1 } })).body;
+    const ok = await call('POST', `/applications/${created.id}/documents/digilocker`, 'inst', { docType: 'audited_accounts', referenceId: 'AUD-2026-0451' });
+    assert.equal(ok.status, 201, JSON.stringify(ok.body));
+    assert.equal(ok.body.source, 'DigiLocker (mock)');
+    assert.equal((await call('POST', `/applications/${created.id}/documents/digilocker`, 'inst', { docType: 'audited_accounts', referenceId: 'AUD-2026-0000' })).status, 404);
+    assert.equal((await call('POST', `/applications/${created.id}/documents/digilocker`, 'inst', { docType: 'faculty_list', referenceId: 'ABC-123456' })).status, 400);
+    assert.equal((await call('POST', `/applications/${created.id}/documents/digilocker`, 'inst2', { docType: 'audited_accounts', referenceId: 'AUD-2026-0451' })).status, 403);
+    const view = (await call('GET', `/applications/${created.id}`, 'inst')).body;
+    assert.equal(view.documents[0].source, 'DigiLocker (mock)');
+    assert.ok(view.audit.some((a: any) => a.event === 'DOCUMENT_FETCHED'));
+    assert.equal(view.doc_check.missing.includes('audited_accounts'), false);
+  });
+
+  test('the accreditation registry cross-check flags a mismatch', async () => {
+    const heat = (await call('GET', '/compliance/overview', 'admin')).body;
+    const byCode = Object.fromEntries(heat.institutions.map((i: any) => [i.code, i.id]));
+    const bad = (await call('GET', `/integrations/accreditation/${byCode['DEMO-0003']}`, 'officer')).body;
+    assert.equal(bad.match, false);
+    assert.equal(bad.differenceDays, -20);
+    const good = (await call('GET', `/integrations/accreditation/${byCode['DEMO-0001']}`, 'officer')).body;
+    assert.equal(good.match, true);
+    assert.equal((await call('GET', `/integrations/accreditation/${byCode['DEMO-0003']}`, 'inst')).status, 403);
+    const list = (await call('GET', '/integrations', 'inst')).body;
+    assert.ok(list.adapters.every((a: any) => ['mock', 'stub'].includes(a.mode)));
+  });
+});
+
+describe('admin configuration', () => {
+  test('only admins can read or change settings', async () => {
+    assert.equal((await call('GET', '/config', 'officer')).status, 403);
+    assert.equal((await call('PUT', '/config/sla', 'regW', { state: 'evc_visit', hours: 10 })).status, 403);
+    const cfg = (await call('GET', '/config', 'admin')).body;
+    assert.equal(cfg.types.length, 4);
+    assert.equal(cfg.rules.length, 4);
+    assert.ok(cfg.sla.some((s: any) => s.state === 'evc_visit'));
+  });
+
+  test('changing a route changes the path of new applications; invalid routes are refused', async () => {
+    assert.equal((await call('PUT', '/config/routes/new_course', 'admin', { stages: [] })).status, 400);
+    assert.equal((await call('PUT', '/config/routes/not_a_type', 'admin', { stages: ['document_scrutiny'] })).status, 400);
+    const set = await call('PUT', '/config/routes/new_course', 'admin', { stages: ['committee_review', 'document_scrutiny'] });
+    assert.deepEqual(set.body.stages, ['document_scrutiny', 'committee_review'], 'normalised to canonical order');
+    try {
+      const created = (await call('POST', '/applications', 'inst', newCourse('E2E custom route'))).body;
+      for (const d of REQUIRED) await upload(created.id, 'inst', d);
+      await call('POST', `/applications/${created.id}/actions`, 'inst', { action: 'submit' });
+      const a = (await call('POST', `/applications/${created.id}/actions`, 'officer', { action: 'pass' })).body;
+      assert.equal(a.state, 'committee_review', 'compliance is skipped by the new route');
+    } finally {
+      await call('PUT', '/config/routes/new_course', 'admin', { stages: ['document_scrutiny', 'compliance_check', 'committee_review'] });
+    }
+  });
+
+  test('SLA hours and compliance thresholds are editable and take effect', async () => {
+    assert.equal((await call('PUT', '/config/sla', 'admin', { state: 'draft', hours: 5 })).status, 400);
+    await call('PUT', '/config/sla', 'admin', { state: 'document_scrutiny', hours: 10 });
+    try {
+      const created = (await call('POST', '/applications', 'inst', newCourse('E2E SLA'))).body;
+      for (const d of REQUIRED) await upload(created.id, 'inst', d);
+      const a = (await call('POST', `/applications/${created.id}/actions`, 'inst', { action: 'submit' })).body;
+      const hours = (new Date(a.sla_due_at).getTime() - new Date(a.stage_entered_at).getTime()) / 3_600_000;
+      assert.equal(Math.round(hours), 10);
+    } finally {
+      await call('PUT', '/config/sla', 'admin', { state: 'document_scrutiny', hours: 72 });
+    }
+
+    assert.equal((await call('PUT', '/config/rules/faculty_ratio', 'admin', { params: { maxRatio: -1 } })).status, 400);
+    assert.equal((await call('PUT', '/config/rules/faculty_ratio', 'admin', { params: { bogus: 1 } })).status, 400);
+    const before = (await call('GET', '/compliance/overview', 'admin')).body.institutions.filter((i: any) => !i.results.faculty_ratio.passed).length;
+    await call('PUT', '/config/rules/faculty_ratio', 'admin', { params: { maxRatio: 40 } });
+    try {
+      assert.equal((await call('POST', '/config/rules/reevaluate', 'admin')).body.evaluated, 12);
+      const after = (await call('GET', '/compliance/overview', 'admin')).body.institutions.filter((i: any) => !i.results.faculty_ratio.passed).length;
+      assert.ok(before > 0 && after === 0, `a looser ratio clears every ratio failure (${before} -> ${after})`);
+    } finally {
+      await call('PUT', '/config/rules/faculty_ratio', 'admin', { params: { maxRatio: 20 } });
+      await call('POST', '/config/rules/reevaluate', 'admin');
+    }
+  });
+});

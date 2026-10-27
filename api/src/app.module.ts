@@ -14,6 +14,11 @@ import { HealthController } from './health.controller';
 import { DbModule } from './db/db.service';
 import { SeedService } from './seed/seed.service';
 import { StorageService } from './storage/storage.service';
+import { ConfigController } from './config/config.controller';
+import { IntegrationsController } from './integrations/integrations.controller';
+import { IntegrationsService } from './integrations/integrations.service';
+import { LettersController } from './letters/letters.controller';
+import { LettersService } from './letters/letters.service';
 import { ValidityController } from './validity/validity.controller';
 import { ValidityService } from './validity/validity.service';
 import { ApplicationsController } from './workflow/applications.controller';
@@ -28,7 +33,7 @@ import { EvcService } from './workflow/evc.service';
     AlertsModule,
     JwtModule.register({ global: true, secret: config.jwtSecret, signOptions: { expiresIn: '12h' } }),
   ],
-  controllers: [HealthController, AuthController, ApplicationsController, EvcController, ValidityController, ComplianceController, AnalyticsController],
+  controllers: [HealthController, AuthController, ApplicationsController, EvcController, ValidityController, LettersController, IntegrationsController, ConfigController, ComplianceController, AnalyticsController],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_FILTER, useClass: ZodFilter },
@@ -38,6 +43,8 @@ import { EvcService } from './workflow/evc.service';
     WorkflowConfigService,
     EvcService,
     ValidityService,
+    IntegrationsService,
+    LettersService,
     ApplicationsService,
     SeedService,
   ],

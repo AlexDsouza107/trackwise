@@ -7,13 +7,16 @@ import { memoryStorage } from 'multer';
 import { z } from 'zod';
 import { CurrentUser } from '../auth/auth';
 import { APPLICATION_TYPES, AuthUser, REQUIRED_DOCUMENTS, TYPE_LABELS } from '../common/types';
+import { DIGILOCKER_SOURCE, IntegrationsService } from '../integrations/integrations.service';
 import { ApplicationsService, CreateDto } from './applications.service';
+
+const FetchDto = z.object({ docType: z.string(), referenceId: z.string() });
 
 const ActDto = z.object({ action: z.string(), note: z.string().max(2000).optional() });
 
 @Controller()
 export class ApplicationsController {
-  constructor(private readonly svc: ApplicationsService) {}
+  constructor(private readonly svc: ApplicationsService, private readonly integrations: IntegrationsService) {}
 
   @Get('meta')
   meta() {
@@ -54,6 +57,15 @@ export class ApplicationsController {
     return this.svc.uploadDocument(u, id, {
       docType, filename: file.originalname, contentType: file.mimetype || 'application/octet-stream', buffer: file.buffer,
     });
+  }
+
+  /** Pulls an issued document from the (mock) digital locker instead of uploading it. */
+  @Post('applications/:id/documents/digilocker')
+  async fetchFromLocker(@CurrentUser() u: AuthUser, @Param('id', ParseIntPipe) id: number, @Body() body: unknown) {
+    const { docType, referenceId } = FetchDto.parse(body);
+    const app = await this.svc.get(u, id);
+    const doc = this.integrations.fetchDocument(docType, referenceId, app.institution!.name);
+    return this.svc.uploadDocument(u, id, { docType, filename: doc.filename, contentType: doc.contentType, buffer: doc.buffer, source: DIGILOCKER_SOURCE });
   }
 
   @Delete('applications/:id/documents/:docId')

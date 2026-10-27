@@ -117,7 +117,8 @@ export class ApplicationsService {
     const app = await this.row(id);
     if (user.role === 'institution' && user.institutionId !== app.institution_id) throw new ForbiddenException();
     const [institution, documents, audit, evc, validity] = await Promise.all([
-      this.db.one<{ region: string | null }>('select id, name, code, city, state, region, approval_valid_until from institutions where id=$1', [app.institution_id]),
+      this.db.one<{ id: number; name: string; code: string; city: string; state: string; region: string | null; approval_valid_until: Date | null }>(
+        'select id, name, code, city, state, region, approval_valid_until from institutions where id=$1', [app.institution_id]),
       this.db.query('select id, doc_type, filename, content_type, size_bytes, source, uploaded_at from documents where application_id=$1 order by id', [id]),
       this.db.query('select * from audit_log where application_id=$1 order by id', [id]),
       this.evc.forApplication(id),

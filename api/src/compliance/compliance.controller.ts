@@ -1,8 +1,8 @@
-import { Body, Controller, ForbiddenException, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { assertRegionAccess, effectiveRegion } from '../common/access';
 import { AuthUser } from '../common/types';
 import { CurrentUser, Roles } from '../auth/auth';
-import { ComplianceService, RulePatchDto } from './compliance.service';
+import { ComplianceService } from './compliance.service';
 
 @Controller('compliance')
 export class ComplianceController {
@@ -25,18 +25,6 @@ export class ComplianceController {
     const d = await this.svc.detail(id);
     assertRegionAccess(u, (d.institution as { region: string | null }).region);
     return d;
-  }
-
-  @Roles('admin')
-  @Post('rules/:code')
-  updateRule(@Param('code') code: string, @Body() body: unknown) {
-    return this.svc.updateRule(code, RulePatchDto.parse(body));
-  }
-
-  @Roles('admin')
-  @Post('evaluate-all')
-  async evaluateAll() {
-    return { evaluated: await this.svc.evaluateAllActive() };
   }
 
   @Roles('officer', 'regional', 'admin')
