@@ -179,4 +179,4 @@ DATABASE_URL=postgres://user@127.0.0.1:5432/empty_db AI_URL=http://localhost:800
 - A changed route applies to applications submitted after the change; in-flight applications keep the route they were submitted with.
 - The seed backdates timestamps through the real workflow so SLA breaches, EVC reminders and escalations are live, not hard-coded.
 - `docker compose up` has not been run on the development machine (no Docker installed there). Everything was verified natively, `infra/smoke.sh` passes against the no-Docker stack,
-  and CI runs the compose stack on every push; check the latest *CI* run on GitHub for its status.
+  and CI builds and smoke-tests the compose stack on every push (green as of v1.2.1; it caught a removed MinIO image, now `bitnamilegacy/minio`). Check the latest *CI* run on GitHub before presenting.
