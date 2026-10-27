@@ -23,12 +23,11 @@ services:
       retries: 20
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
-    command: server /data --console-address ":9001"
+    image: bitnamilegacy/minio:2025.4.22 # minio/minio is no longer published on Docker Hub or quay.io
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-trackwise}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-trackwise-secret}
-    volumes: [miniodata:/data]
+    volumes: [miniodata:/bitnami/minio/data]
     ports: ["9000:9000", "9001:9001"]
 
   ai:
