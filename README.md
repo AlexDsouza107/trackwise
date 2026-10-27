@@ -1,7 +1,7 @@
 <img src="docs/logo-mark.png" alt="ApproveIt logo" width="96" align="right">
 
 # ApproveIt
-*AICTE approvals. Simplified.* (the repository and code are still named `trackwise`)
+(the repository and code are still named `trackwise`)
 
 **Integrated AICTE Approval Workflow Automation, Compliance Monitoring and Alert Management System**
 Smart India Hackathon, round 2 demo MVP (theme: smart automation).

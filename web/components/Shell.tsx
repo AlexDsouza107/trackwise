@@ -1,5 +1,5 @@
 'use client';
-import { LogoMark, Wordmark, TAGLINE } from './Brand';
+import { LogoMark, Wordmark } from './Brand';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -62,8 +62,8 @@ function Inner({ children }: { children: ReactNode }) {
     <div className="min-h-screen md:flex">
       <aside className="aside-in glass z-10 m-3 flex flex-col rounded-[26px] md:sticky md:top-3 md:h-[calc(100vh-1.5rem)] md:w-60 md:shrink-0">
         <div className="flex items-center gap-2.5 px-5 pb-3 pt-5">
-          <LogoMark size={40} />
-          <div><Wordmark className="block text-[18px] leading-tight" /><div className="text-[12px] leading-tight text-muted">{TAGLINE}</div></div>
+          <LogoMark size={56} />
+          <Wordmark className="text-[22px] leading-tight" />
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:block md:space-y-0.5 md:pb-0">
           {items.map((n) => (

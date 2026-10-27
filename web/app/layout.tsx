@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ApproveIt - AICTE approvals. Simplified.',
+  title: 'ApproveIt',
   description: 'AICTE approval workflow automation, compliance monitoring and alert management (illustrative demo)',
 };
 

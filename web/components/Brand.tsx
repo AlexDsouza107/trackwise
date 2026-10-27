@@ -1,6 +1,5 @@
 /* ApproveIt brand: the logo mark (public/logo-mark.png) and the two-tone wordmark. */
 export const BRAND_NAME = 'ApproveIt';
-export const TAGLINE = 'AICTE approvals. Simplified.';
 
 export function LogoMark({ size, className = '' }: { size: number; className?: string }) {
   return (
