@@ -37,8 +37,8 @@ export default function EvcPage() {
       <PageHeader title="Expert visits" subtitle="Expert Visit Committee scheduling, member assignment and reports. Unscheduled visits, upcoming reminders and overdue reports escalate automatically."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {pinned ? <span className="rounded-full bg-brand-soft px-3 py-1 text-[12px] font-medium text-brand">{user.region} region</span> : (
-              <select className="input !w-auto !py-1.5 text-[13px]" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
+            {pinned ? <span className="rounded-full bg-brand-soft px-3 py-1 text-[13px] font-medium text-brand">{user.region} region</span> : (
+              <select className="input !w-auto !py-1.5 text-[14px]" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
                 <option value="">All regions</option>{REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             )}

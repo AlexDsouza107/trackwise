@@ -154,7 +154,7 @@ export default function ApplicationPage() {
                       <form className="flex w-full items-center gap-2 pl-8" onSubmit={(e) => { e.preventDefault(); void fetchFromLocker(t); }}>
                         <input className="input !py-1.5 text-xs" aria-label="DigiLocker reference" placeholder="Reference number, e.g. DOC-2026-0451" value={lockerRef} onChange={(e) => setLockerRef(e.target.value)} />
                         <button className="btn-primary !px-3 !py-1.5 text-xs" disabled={busy === `locker-${t}` || lockerRef.trim().length < 6}>{busy === `locker-${t}` ? 'Fetching…' : 'Fetch'}</button>
-                        <span className="text-[11px] text-muted">Demo adapter: references ending in 000 are “not found”.</span>
+                        <span className="text-[12px] text-muted">Demo adapter: references ending in 000 are “not found”.</span>
                       </form>
                     )}
                   </li>
@@ -251,7 +251,7 @@ export default function ApplicationPage() {
                 {needsNote && (
                   <div><div className="flex items-center justify-between"><label className="label" htmlFor="note">Note (required for some actions)</label>
                     {app.availableActions.some((a) => a.key === 'deficiency') && (
-                      <button type="button" className="mb-1.5 text-[12px] text-brand hover:underline" disabled={busy === 'draft'} onClick={() => void draftNote()}>{busy === 'draft' ? 'Drafting…' : '✎ Draft from findings'}</button>
+                      <button type="button" className="mb-1.5 text-[13px] text-brand hover:underline" disabled={busy === 'draft'} onClick={() => void draftNote()}>{busy === 'draft' ? 'Drafting…' : '✎ Draft from findings'}</button>
                     )}</div>
                     <textarea id="note" className="input min-h-20" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason, observations, or what was corrected…" /></div>
                 )}

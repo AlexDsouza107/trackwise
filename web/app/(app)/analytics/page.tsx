@@ -43,8 +43,8 @@ export default function Analytics() {
   return (
     <>
       <PageHeader title="Analytics" subtitle={`Pipeline health, turnaround, compliance and alert volume ${data.region ? `for the ${data.region} region` : 'across all regions and institutions'}.`}
-        action={pinned ? <span className="rounded-full bg-brand-soft px-3 py-1 text-[12px] font-medium text-brand">{user.region} region</span> : (
-          <select className="input !w-auto !py-1.5 text-[13px]" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
+        action={pinned ? <span className="rounded-full bg-brand-soft px-3 py-1 text-[13px] font-medium text-brand">{user.region} region</span> : (
+          <select className="input !w-auto !py-1.5 text-[14px]" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
             <option value="">All regions</option>{REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>)} />
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">

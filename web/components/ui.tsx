@@ -13,7 +13,7 @@ const TONES: Record<Tone, string> = {
 /** Status chips always pair color with an icon glyph + text, never color alone. */
 export function Chip({ tone, icon, children }: { tone: Tone; icon?: string; children: ReactNode }) {
   return (
-    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-[3px] text-[12px] font-medium ${TONES[tone]}`}>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-[3px] text-[13px] font-medium ${TONES[tone]}`}>
       {icon && <span aria-hidden>{icon}</span>}{children}
     </span>
   );
@@ -45,7 +45,7 @@ export function Card({ title, action, children, className = '' }: { title?: Reac
     <section className={`card ${className}`}>
       {(title || action) && (
         <header className="flex items-center justify-between gap-3 px-5 pb-1 pt-4">
-          <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>{action}
+          <h2 className="text-[16px] font-semibold tracking-tight">{title}</h2>{action}
         </header>
       )}
       <div className="p-5">{children}</div>
@@ -75,9 +75,9 @@ function CountUp({ to }: { to: number }) {
 export function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: string; tone?: Tone }) {
   return (
     <div className="card lift p-5">
-      <div className="text-[12px] font-medium text-ink2">{label}</div>
-      <div className={`mt-1.5 text-[34px] font-semibold leading-none tracking-tight ${tone === 'bad' ? 'text-bad-text' : ''}`}>{typeof value === 'number' ? <CountUp to={value} /> : value}</div>
-      {hint && <div className="mt-2 text-[12px] text-muted">{hint}</div>}
+      <div className="text-[13px] font-medium text-ink2">{label}</div>
+      <div className={`mt-1.5 text-[35px] font-semibold leading-none tracking-tight ${tone === 'bad' ? 'text-bad-text' : ''}`}>{typeof value === 'number' ? <CountUp to={value} /> : value}</div>
+      {hint && <div className="mt-2 text-[13px] text-muted">{hint}</div>}
     </div>
   );
 }
@@ -86,8 +86,8 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-[30px] font-semibold leading-tight tracking-[-0.022em]">{title}</h1>
-        {subtitle && <p className="mt-1 text-[14px] text-ink2">{subtitle}</p>}
+        <h1 className="text-[31px] font-semibold leading-tight tracking-[-0.022em]">{title}</h1>
+        {subtitle && <p className="mt-1 text-[15px] text-ink2">{subtitle}</p>}
       </div>
       {action}
     </div>

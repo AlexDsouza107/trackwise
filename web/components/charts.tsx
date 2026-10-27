@@ -6,7 +6,7 @@ import { humanize } from '@/lib/format';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const monthLabel = (p: string) => `${MONTHS[Number(p.slice(5, 7)) - 1]} ${p.slice(2, 4)}`;
 
-const axisProps = { stroke: 'var(--axis)', tick: { fill: 'var(--muted)', fontSize: 12 }, tickLine: false } as const;
+const axisProps = { stroke: 'var(--axis)', tick: { fill: 'var(--muted)', fontSize: 13 }, tickLine: false } as const;
 
 function TipBox({ active, payload, label, unit }: { active?: boolean; payload?: { name: string; value: number; color?: string }[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null;
@@ -30,7 +30,7 @@ export function TrendChart({ data, xKey, yKey, name, height = 240 }: { data: Rec
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           <XAxis dataKey={xKey} {...axisProps} tickFormatter={monthLabel} />
           <YAxis domain={[40, 100]} {...axisProps} />
-          <ReferenceLine y={70} stroke="var(--axis)" strokeDasharray="4 4" label={{ value: 'Target 70', fill: 'var(--muted)', fontSize: 11, position: 'insideBottomRight' }} />
+          <ReferenceLine y={70} stroke="var(--axis)" strokeDasharray="4 4" label={{ value: 'Target 70', fill: 'var(--muted)', fontSize: 12, position: 'insideBottomRight' }} />
           <Tooltip content={<TipBox />} labelFormatter={monthLabel} cursor={{ stroke: 'var(--axis)' }} />
           <Line animationDuration={900} animationEasing="ease-out" type="monotone" dataKey={yKey} name={name} stroke="var(--series-1)" strokeWidth={2} dot={{ r: 4, fill: 'var(--series-1)', stroke: 'var(--surface)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
         </LineChart>
@@ -50,7 +50,7 @@ export function SimpleBars({ data, xKey, yKey, name, height = 240, colors, unit 
           <XAxis dataKey={xKey} {...axisProps} interval={0} />
           <YAxis {...axisProps} allowDecimals={false} />
           <Tooltip content={<TipBox unit={unit} />} cursor={{ fill: 'var(--brand-soft)' }} />
-          <Bar animationDuration={800} animationEasing="ease-out" dataKey={yKey} name={name} radius={[4, 4, 0, 0]} maxBarSize={44} label={{ position: 'top', fill: 'var(--ink-2)', fontSize: 11 }}>
+          <Bar animationDuration={800} animationEasing="ease-out" dataKey={yKey} name={name} radius={[4, 4, 0, 0]} maxBarSize={44} label={{ position: 'top', fill: 'var(--ink-2)', fontSize: 12 }}>
             {data.map((_, i) => <Cell key={i} fill={colors?.[i] ?? 'var(--series-1)'} />)}
           </Bar>
         </BarChart>
@@ -89,7 +89,7 @@ export function StackedAlerts({ data, height = 260 }: { data: Record<string, str
           <XAxis dataKey="day" {...axisProps} tickFormatter={(d: string) => d.slice(5)} />
           <YAxis {...axisProps} allowDecimals={false} />
           <Tooltip content={<TipBox />} cursor={{ fill: 'var(--brand-soft)' }} />
-          <Legend iconType="square" formatter={(v: string) => <span style={{ color: 'var(--ink-2)', fontSize: 12 }}>{KIND_SERIES.find((k) => k.key === v)?.label ?? v}</span>} />
+          <Legend iconType="square" formatter={(v: string) => <span style={{ color: 'var(--ink-2)', fontSize: 13 }}>{KIND_SERIES.find((k) => k.key === v)?.label ?? v}</span>} />
           {KIND_SERIES.map((k, i) => (
             // 2px surface stroke acts as the gap between stacked segments
             <Bar animationDuration={800} animationEasing="ease-out" key={k.key} dataKey={k.key} name={k.label} stackId="a" fill={k.color} stroke="var(--surface)" strokeWidth={2} radius={i === KIND_SERIES.length - 1 ? [4, 4, 0, 0] : 0} maxBarSize={40} />
@@ -114,7 +114,7 @@ export function Heatmap({ rules, institutions, onSelect, selectedId }: {
       <table className="w-full min-w-[640px] border-separate border-spacing-0.5 text-sm">
         <thead><tr>
           <th className="th">Institution</th>
-          {rules.map((r) => <th key={r.code} className="th text-center">{r.name}<div className="normal-case text-[10px] font-normal">{r.severity}</div></th>)}
+          {rules.map((r) => <th key={r.code} className="th text-center">{r.name}<div className="normal-case text-[11px] font-normal">{r.severity}</div></th>)}
           <th className="th text-center">Score</th>
         </tr></thead>
         <tbody>

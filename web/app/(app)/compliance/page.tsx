@@ -41,7 +41,7 @@ export default function CompliancePage() {
       <div className="space-y-4">
         {staff && (
           <Card title={`Compliance heatmap${pinned ? ` · ${user.region} region` : ''}`} action={!pinned ? (
-            <select className="input !w-auto !py-1 text-[13px]" aria-label="Region" value={region} onChange={(e) => { setRegion(e.target.value); setSelected(null); }}>
+            <select className="input !w-auto !py-1 text-[14px]" aria-label="Region" value={region} onChange={(e) => { setRegion(e.target.value); setSelected(null); }}>
               <option value="">All regions</option>{REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>) : undefined}>
             {overview.loading && <Loading />}

@@ -61,8 +61,8 @@ export default function DocumentsPage() {
       <PageHeader title="Document validity" subtitle="Lease deeds and other prescribed documents with expiry tracking, advance alerts (90 / 30 / 7 days and on expiry) and renewal verification."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {!inst && (pinned ? <span className="rounded-full bg-brand-soft px-3 py-1 text-[12px] font-medium text-brand">{user.region} region</span> : (
-              <select className="input !w-auto !py-1.5 text-[13px]" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
+            {!inst && (pinned ? <span className="rounded-full bg-brand-soft px-3 py-1 text-[13px] font-medium text-brand">{user.region} region</span> : (
+              <select className="input !w-auto !py-1.5 text-[14px]" aria-label="Region" value={region} onChange={(e) => setRegion(e.target.value)}>
                 <option value="">All regions</option>{REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>))}
             <div className="seg" role="tablist">

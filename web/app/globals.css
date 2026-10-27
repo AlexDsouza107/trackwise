@@ -76,7 +76,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-manrope), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
@@ -99,16 +99,16 @@ body::before { content: ''; position: fixed; inset: 0; z-index: -1; background: 
 
 @layer components {
   .card { @apply glass rounded-[22px]; -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%); }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[14px] font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[15px] font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45; }
   .btn-primary { @apply btn bg-brand text-brand-ink shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_14px_-4px_var(--brand)] hover:brightness-110; }
   .btn-ghost { @apply btn glass text-ink hover:brightness-105; }
   .btn-danger { @apply btn bg-bad text-white hover:brightness-110; }
   .btn-warning { @apply btn bg-warn text-black/85 hover:brightness-105; }
-  .input { @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[14px] text-ink placeholder:text-muted backdrop-blur-md transition focus:border-brand focus:outline-none focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand)_22%,transparent)]; }
-  .label { @apply mb-1.5 block text-[12px] font-medium text-ink2; }
-  .th { @apply px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted; }
-  .td { @apply px-3 py-3.5 text-[14px]; }
-  .seg { @apply inline-flex rounded-xl bg-page p-0.5 text-[13px]; }
+  .input { @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted backdrop-blur-md transition focus:border-brand focus:outline-none focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand)_22%,transparent)]; }
+  .label { @apply mb-1.5 block text-[13px] font-medium text-ink2; }
+  .th { @apply px-3 py-2.5 text-left text-[12px] font-medium uppercase tracking-[0.06em] text-muted; }
+  .td { @apply px-3 py-3.5 text-[15px]; }
+  .seg { @apply inline-flex rounded-xl bg-page p-0.5 text-[14px]; }
   .seg-item { @apply rounded-[10px] px-3.5 py-1.5 text-ink2 transition; }
   .seg-item[aria-selected='true'], .seg-item[aria-pressed='true'] { @apply bg-surface font-medium text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]; }
 }
